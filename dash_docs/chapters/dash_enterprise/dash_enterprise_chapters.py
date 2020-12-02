@@ -701,229 +701,407 @@ Requirements = html.Div(children=[
 
     rc.Markdown(
     '''
-    To deploy dash apps to Dash Enterprise, there
-    are a few files required for successful deployment. Below is a common
-    Dash App folder structure and a brief description of each file's function.
 
-    The information below is presented by language; please choose either
-    Python or R depending on the implementation of Dash you are using.
-    ***
+    In this chapter we will discuss how to configure your project folder to deploy apps on Dash Enterprise. 
+    
+    We will go over the follwing topics:
+
+    - Dash App Deployment & Release Lifecycles
+    - File References
+    - Best Practices
+
+    *The information below is presented by language; please choose either
+    Python, Python (Conda) or R depending on the implementation of Dash you are using.*
+    
     '''
     ),
     dcc.Tabs([
-      dcc.Tab(label='Python', children=[
-        html.Div([
-          rc.Markdown(
-    '''
+        dcc.Tab(label='Python', children=[
+            html.Div([
+                rc.Markdown(
+                '''
 
-    ## Folder Reference
+                ## App Deployment & Release Lifecycle
 
-    ```
-    Dash_App/
-    |-- assets/
-       |-- app.css
-    |-- app.py
-    |-- .gitignore
-    |-- CHECKS
-    |-- Procfile
-    |-- requirements.txt
-    |-- runtime.txt
-    ```
+                To deploy an app with Dash Enterprise Server, two additional files are needed: a `requirements.txt` file to describe your app's dependencies, 
+                and a `Procfile`, to declare what commands are run by the app's containers.
 
-    ***
+                 ```
+                Dash_App/
+                |-- assets/
+                |-- app.py
+                |-- Procfile
+                |-- requirements.txt
+                |-- .gitignore
+                ```
 
-    ## Files Reference
+                You may also include optional files such as a `runtime.txt` file if you want to specify your Python version, 
+                an `apt-packages` file if your app requires additional system-level packages like database drivers, 
+                an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize pre-release health checks. 
+                See [Files Reference](#files-reference) section below for details.
 
-    `app.py`
+                ```
+                Dash_App/
+                |-- assets/
+                |-- app.py
+                |-- .gitignore
+                |-- CHECKS
+                |-- Procfile
+                |-- requirements.txt
+                |-- runtime.txt
+                |-- apt-packages
+                |-- app.json
+                ```
 
-    This is the entry point to your application, it contains your Dash app code.
-    This file must contain a line that defines the `server` variable:
-    ```server = app.server```
+                Your app's lifecycle begins when changes are pushed to your Dash Enterprise server —
+                a new Docker image is created from a builder image and a Buildpack detect script is run. 
+                By including optional special files in your project folder, you can modify how Dash Enterprise Server builds, deploys and releases your apps.
 
-    ***
+                When you run `git push plotly master`, Dash Enterprise will do the following:
 
-    `CHECKS`
+                    1. Create a new Docker container from builder image
+                    2. Mount app source code
+                    3. Detect which Buildpack to use based off of files present in app root folder
+                    4. Install Python runtime environment — override with a `runtime.txt` file
+                    5. Install APT packages: provided with `apt-packages` file
+                    6. Install Python and app's Python dependencies with `requirement.txt` files
+                    7.  Run pre-deployment script specified in `app.json`
+                    8.  Scale containers for each process as specified in `DOKKU_SCALE`
+                    9.  Run commands in each container as specified in `Procfile`
+                    10. Run pre-release app health checks with `CHECKS` file
+                    11. Release: Open app to web traffic
+                    12. Run post-deployment script specified in `app.json`
 
-    This optional file allows you to define custom checks to be performed on your app upon deployment.
-     <dccLink href="/dash-enterprise/checks" children="Learn more about the CHECKS file"/>.
+                ***
 
-    ***
+                ## <a name="files-reference"></a>Files Reference
 
-    `.gitignore`
+                ### Required Files
 
-    Determines which files and folders are ignored in git, and therefore
-    ignored (i.e. not copied to the server) when you deploy your application.
-    An example of its contents would be:
 
-    ```
-    venv
-    *.pyc
-    .DS_Store
-    .env
-    ```
+                ### Optional Files
 
-    ***
 
-    `Procfile`
 
-    Declares what commands are run by app's containers. This is commonly,
-    ```web: gunicorn app:server --workers 4``` where app refers to the file
-    `app.py` and server refers to the variable named server inside that file.
-    gunicorn is the web server that will run your application, make sure to
-    add this in your requirements.txt file.
+                `app.py`
 
-    ***
+                This is the entry point to your application, it contains your Dash app code.
+                This file must contain a line that defines the `server` variable:
+                ```server = app.server```
 
-    `requirements.txt`
+                ***
 
-    Describes the app's python dependencies. For example,
+                `CHECKS`
 
-    ```
-    dash=={}
-    dash-auth=={}
-    dash-renderer=={}
-    dash-core-components=={}
-    dash-html-components=={}
-    ```
+                This optional file allows you to define custom checks to be performed on your app upon deployment.
+                <dccLink href="/dash-enterprise/checks" children="Learn more about the CHECKS file"/>.
 
-    If you are using one of the Dash Enterprise packages, like
-    `dash-design-kit` or `dash-snapshots`, then you'll also
-    need to prefix this file with a "`--extra-index-url`" flag.
-    `--extra-index-url` will specify the download location
-    of these packages. For example, this file might look like:
-    ```
-    --extra-index-url=https://your-dash-server.com/Docs/packages
-    dash-design-kit
-    dash
-    gunicorn
-    ```
+                ***
 
-    ***
+                `.gitignore`
 
-    `runtime.txt`
+                Determines which files and folders are ignored in git, and therefore
+                ignored (i.e. not copied to the server) when you deploy your application.
+                An example of its contents would be:
 
-    This optional file specifies python runtime. For example, its contents would be
-    `python-2.7.15` or `python-3.6.6`.  If omitted, Python 3.6.7 will be installed.
+                ```
+                venv
+                *.pyc
+                .DS_Store
+                .env
+                ```
 
-    ***
+                ***
 
-    `assets`
+                `Procfile`
 
-    An optional folder that contains CSS stylesheets, images, or
-    custom JavaScript files. <dccLink href="/external-resources" children="Learn more about assets"/>.
-    '''),
+                Declares what commands are run by app's containers. This is commonly,
+                ```web: gunicorn app:server --workers 4``` where app refers to the file
+                `app.py` and server refers to the variable named server inside that file.
+                gunicorn is the web server that will run your application, make sure to
+                add this in your requirements.txt file.
+
+                ***
+
+                `requirements.txt`
+
+                Describes the app's python dependencies. For example,
+
+                ```
+                dash=={}
+                dash-auth=={}
+                dash-renderer=={}
+                dash-core-components=={}
+                dash-html-components=={}
+                ```
+
+                If you are using one of the Dash Enterprise packages, like
+                `dash-design-kit` or `dash-snapshots`, then you'll also
+                need to prefix this file with a "`--extra-index-url`" flag.
+                `--extra-index-url` will specify the download location
+                of these packages. For example, this file might look like:
+                ```
+                --extra-index-url=https://your-dash-server.com/Docs/packages
+                dash-design-kit
+                dash
+                gunicorn
+                ```
+
+                ***
+
+                `runtime.txt`
+
+                This optional file specifies python runtime. For example, its contents would be
+                `python-2.7.15` or `python-3.6.6`.  If omitted, Python 3.6.7 will be installed.
+
+                ***
+
+                `assets`
+
+                An optional folder that contains CSS stylesheets, images, or
+                custom JavaScript files. <dccLink href="/external-resources" children="Learn more about assets"/>.
+                '''
+                ),
+            ])
+        ]),
+        dcc.Tab(label='Python (Conda)', children=[
+            html.Div([
+                rc.Markdown(
+                '''
+            
+                ## App Deployment & Release Lifecycle
+
+                To deploy an app with Dash Enterprise Server and Conda, two additional files are needed: a `conda-requirements.txt` file to describe your app's dependencies, 
+                and a `Procfile`, to declare what commands are run by the app's containers:
+
+                 ```
+                Dash_App/
+                |-- assets/
+                |-- app.py
+                |-- Procfile
+                |-- conda-requirements.txt
+                |-- .gitignore
+                ```
+
+                You may also include optional files such as a `runtime.txt` file if you want to specify your Python version, 
+                an `apt-packages` file if your app requires additional system-level packages like database drivers, 
+                an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize pre-release health checks. 
+                See [Files Reference](#files-reference) section below for details.
+
+                ```
+                Dash_App/
+                |-- assets/
+                |-- app.py
+                |-- .gitignore
+                |-- CHECKS
+                |-- Procfile
+                |-- conda-requirements.txt
+                |-- runtime.txt
+                |-- apt-packages
+                |-- app.json
+                ```
+
+                Your app's lifecycle begins when changes are pushed to your Dash Enterprise server —
+                a new Docker image is created from a builder image and a Buildpack detect script is run. 
+                By including special files in your project folder, you can modify how Dash Enterprise Server builds, deploys and releases your apps.
+
+                When you run `git push plotly master`, Dash Enterprise will do the following:
+
+                    1. Create a new Docker container from builder image
+                    2. Mount app source code
+                    3. Detect which Buildpack to use based off of files present in app root folder
+                    4. Install Python runtime environment — override with a `runtime.txt` file
+                    5. Install APT packages: provided with `apt-packages` file
+                    6. Install Python and app's Python dependencies with `conda-requirement.txt` files
+                    7.  Run pre-deployment script specified in `app.json`
+                    8.  Scale containers for each process as specified in `DOKKU_SCALE`
+                    9.  Run commands in each container as specified in `Procfile`
+                    10. Run pre-release app health checks with `CHECKS` file
+                    11. Release: Open app to web traffic
+                    12. Run post-deployment script specified in `app.json`
+
+                ***
+
+                ## <a name="files-reference"></a>Files Reference
+
+                ### Required Files
+
+
+                ### Optional Files
+                '''
+                ),
+            ])
+        ]),
+        dcc.Tab(label='R', children=[
+            html.Div([
+                rc.Markdown(
+                '''
+
+                ## App Deployment & Release Lifecycle
+
+                To deploy an app with Dash Enterprise Server, two additional files are needed: a `requirements.txt` file to describe your app's dependencies, 
+                and a `Procfile`, to declare what commands are run by the app's containers:
+
+                 ```
+                Dash_App/
+                |-- assets/
+                |-- app.py
+                |-- Procfile
+                |-- requirements.txt
+                |-- .gitignore
+                ```
+
+                You may also include optional files such as a `runtime.txt` file if you want to specify your Python version, 
+                an `apt-packages` file if your app requires additional system-level packages like database drivers, 
+                an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize pre-release health checks. 
+                See [Files Reference](#files-reference) section below for details.
+
+                ```
+                Dash_App/
+                |-- assets/
+                |-- app.py
+                |-- .gitignore
+                |-- CHECKS
+                |-- Procfile
+                |-- requirements.txt
+                |-- runtime.txt
+                |-- apt-packages
+                |-- app.json
+                ```
+
+                Your app's lifecycle begins when changes are pushed to your Dash Enterprise server —
+                a new Docker image is created from a builder image and a Buildpack detect script is run. 
+                By including special files in your project folder, you can modify how Dash Enterprise Server builds, deploys and releases your apps.
+
+                When you run `git push plotly master`, Dash Enterprise will do the following:
+
+                    1. Create a new Docker container from builder image
+                    2. Mount app source code
+                    3. Detect which Buildpack to use based off of files present in app root folder
+                    4. Install R runtime environment — override with a `runtime.txt` file
+                    5. Install APT packages: provided with `apt-packages` file
+                    6. Install R and app's R dependencies with `init.R` files
+                    7.  Run pre-deployment script specified in `app.json`
+                    8.  Scale containers for each process as specified in `DOKKU_SCALE`
+                    9.  Run commands in each container as specified in `Procfile`
+                    10. Run pre-release app health checks with `CHECKS` file
+                    11. Release: Open app to web traffic
+                    12. Run post-deployment script specified in `app.json`
+
+                ***
+
+                ## <a name="files-reference"></a>Files Reference
+
+                ### Required Files
+
+
+                ### Optional Files
+                ## Folder Reference
+
+                ```
+                Dash_App/
+                |-- assets/
+                |-- app.css
+                |-- app.R
+                |-- .gitignore
+                |-- CHECKS
+                |-- Procfile
+                |-- .buildpacks
+                |-- apt-packages
+                ```
+
+                ***
+
+                ## Files Reference
+
+                `app.R`
+
+                This is the entry point to your application, it contains your Dash app code.
+                This file must contain a line that includes ```app$run_server()```, or which
+                loads an R script that does.
+
+                ***
+
+                `CHECKS`
+
+                This optional file allows you to define custom checks to be performed on your app upon deployment.
+                <dccLink href="/dash-enterprise/checks" children="Learn more about the CHECKS file"/>.
+
+                ***
+
+                `.gitignore`
+
+                Determines which files and folders are ignored in git, and therefore
+                ignored (i.e. not copied to the server) when you deploy your application.
+                An example of its contents would be:
+
+                ```
+                venv
+                *.pyc
+                .DS_Store
+                .env
+                ```
+
+                ***
+
+                `init.R`
+
+                ```
+                # R script to run author supplied code, typically used to install additional R packages
+                # ======================================================================
+
+                # packages go here
+                install.packages('remotes')
+
+                remotes::install_github('plotly/dashR', upgrade=TRUE)
+                ```
+
+                ***
+
+                `.buildpacks`
+
+                Specifies the buildpack used by the R application to provide a base environment
+                for deployment. This file should contain a URL to the buildpack and the relevant
+                branch, unless the buildpack is stored within `master`.
+
+                We recommend using Plotly's customized buildpack for R deployments:
+
+                ```
+                https://github.com/plotly/heroku-buildpack-r#heroku-18
+                ```
+
+                ***
+
+                `Procfile`
+
+                Declares what commands are run by app's containers. This is commonly,
+                ```web: R -f /app/app.R```, which launches the Dash app from the `/app`
+                subdirectory, where it will be copied during deployment.
+
+                ***
+
+                `apt-packages`
+
+                Describes the app's system-level dependencies. For example, one might include
+
+                ```
+                libcurl4-openssl-dev
+                libxml2-dev
+                libv8-3.14-dev
+                ```
+
+                ***
+
+                `assets`
+
+                An optional folder that contains CSS stylesheets, images, or
+                custom JavaScript files. <dccLink href="/external-resources" children="Learn more about assets"/>.
+                '''
+                ),
+            ])
+        ])
     ])
-      ]),
-      dcc.Tab(label='R', children=[
-        html.Div([
-          rc.Markdown(
-          '''
-
-    ## Folder Reference
-
-    ```
-    Dash_App/
-    |-- assets/
-       |-- app.css
-    |-- app.R
-    |-- .gitignore
-    |-- CHECKS
-    |-- Procfile
-    |-- .buildpacks
-    |-- apt-packages
-    ```
-
-    ***
-
-    ## Files Reference
-
-    `app.R`
-
-    This is the entry point to your application, it contains your Dash app code.
-    This file must contain a line that includes ```app$run_server()```, or which
-    loads an R script that does.
-
-    ***
-
-    `CHECKS`
-
-    This optional file allows you to define custom checks to be performed on your app upon deployment.
-     <dccLink href="/dash-enterprise/checks" children="Learn more about the CHECKS file"/>.
-
-    ***
-
-    `.gitignore`
-
-    Determines which files and folders are ignored in git, and therefore
-    ignored (i.e. not copied to the server) when you deploy your application.
-    An example of its contents would be:
-
-    ```
-    venv
-    *.pyc
-    .DS_Store
-    .env
-    ```
-
-    ***
-
-    `init.R`
-
-    ```
-    # R script to run author supplied code, typically used to install additional R packages
-    # ======================================================================
-
-    # packages go here
-    install.packages('remotes')
-
-    remotes::install_github('plotly/dashR', upgrade=TRUE)
-    ```
-
-    ***
-
-    `.buildpacks`
-
-    Specifies the buildpack used by the R application to provide a base environment
-    for deployment. This file should contain a URL to the buildpack and the relevant
-    branch, unless the buildpack is stored within `master`.
-
-    We recommend using Plotly's customized buildpack for R deployments:
-
-    ```
-    https://github.com/plotly/heroku-buildpack-r#heroku-18
-    ```
-
-    ***
-
-    `Procfile`
-
-    Declares what commands are run by app's containers. This is commonly,
-    ```web: R -f /app/app.R```, which launches the Dash app from the `/app`
-    subdirectory, where it will be copied during deployment.
-
-    ***
-
-    `apt-packages`
-
-    Describes the app's system-level dependencies. For example, one might include
-
-    ```
-    libcurl4-openssl-dev
-    libxml2-dev
-    libv8-3.14-dev
-    ```
-
-    ***
-
-    `assets`
-
-    An optional folder that contains CSS stylesheets, images, or
-    custom JavaScript files. <dccLink href="/external-resources" children="Learn more about assets"/>.
-    '''),
-    ])
-    ])
-    ])
-    ])
+])
 
 # # # # # # #
 # Adding Static Assets

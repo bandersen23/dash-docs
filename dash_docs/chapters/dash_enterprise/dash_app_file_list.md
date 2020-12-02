@@ -1,13 +1,9 @@
 # Dash Application Structure
 
-### CHECKS
+---
 
-Custom checks defined by a `CHECKS` file only apply to the web process type.
+## Required Files
 
-Dash App Templates including `CHECKS`:
-
-- [Sample Vaex Application](https://dash-playground.plotly.host/Docs/templates/vaex-sample)
-  
 ### requirements.txt
 
 ### conda-requirements.txt (conda)
@@ -18,7 +14,46 @@ Dash App Templates including `conda-requirements.txt`:
 - [Managing Dependencies with Conda](https://dash-playground.plotly.host/Docs/templates/conda)
 - [Managing Dependencies with Conda-Airgapped](https://dash-playground.plotly.host/Docs/templates/conda-airgapped)
 
-#### setup . py
+### setup py
+
+### Pipfile
+
+The `Pipfile` is the dedicated file used by the `Pipenv` virtual environment to manage project dependencies.
+
+### Procfile
+
+The `Procfile` specifies the commands that are executed by the app on startup. **All** deployed Dash app require a `Procfile`. You can use a Procfile to declare a variety of process types, including:
+
+- Your app’s web server
+- Multiple types of worker processes
+- A singleton process, such as a clock
+- Tasks to run before a new release is deployed
+
+
+```shell
+web: gunicorn app:server --workers 4
+worker-default: celery -A tasks worker --loglevel=INFO --concurrency=2
+worker-beat: celery -A tasks beat --loglevel=INFO
+```
+A typical `Procfile` should be similar to what you see above. Other commands include:
+
+- --workers
+- --timeout
+- --preload
+
+(link to doc expanding on use)
+
+---
+
+## Optional Files
+
+### CHECKS
+
+Custom checks defined by a `CHECKS` file only apply to the web process type.
+
+Dash App Templates including `CHECKS`:
+
+- [Sample Vaex Application](https://dash-playground.plotly.host/Docs/templates/vaex-sample)
 
 ### runtime.txt
 
@@ -39,6 +74,8 @@ Dash App Templates including `conda-runtime.txt`:
 An optional folder that contains CSS stylesheets, images, or custom JavaScript files. [Learn more about assets](https://dash.plotly.com/external-resources).
 
 ### app.json
+
+Optional
 
 Sometimes you need to run a command on at deployment time, but before an app is completely deployed. Common use cases include:
 
@@ -94,24 +131,6 @@ Dash App Templates including `DOKKU_SCALE`:
 - [Dash Embedded with Snapshots Engine](https://dash-playground.plotly.host/Docs/templates/dash-embedded-snapshots-example)
 - [Background Task Queue and Viewing Previous Results](https://dash-playground.plotly.host/Docs/templates/snapshots-results-on-same-page-with-archive)
 
-#### Pipfile
-
-The `Pipfile` is the dedicated file used by the `Pipenv` virtual environment to manage project dependencies.
-
-#### `Procfile`
-
-The `Procfile` specifies the commands that are executed by the app on startup. **All** deployed Dash app require a `Procfile`. You can use a Procfile to declare a variety of process types, including:
-
-- Your app’s web server
-- Multiple types of worker processes
-- A singleton process, such as a clock
-- Tasks to run before a new release is deployed
-
-```shell
-web: gunicorn app:server --workers 4
-worker-default: celery -A tasks worker --loglevel=INFO --concurrency=2
-worker-beat: celery -A tasks beat --loglevel=INFO
-```
 
 ### APT files
 
