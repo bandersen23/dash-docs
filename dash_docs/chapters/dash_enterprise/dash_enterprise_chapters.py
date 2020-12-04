@@ -701,12 +701,12 @@ Requirements = html.Div(children=[
 
     rc.Markdown(
     '''
-
     In this chapter we will discuss how to configure your project folder to deploy apps on Dash Enterprise. 
     
     We will go over the following topics:
 
     - Dash App Deployment & Release Lifecycles
+    - Buildpack Detection
     - Application Structure
     - File References
     - Best Practices
@@ -718,11 +718,17 @@ Requirements = html.Div(children=[
             html.Div([
                 rc.Markdown(
                 '''
+                // MARK: Python Start
                 ## Dash App Deployment & Release Lifecycles
 
                 The Deployment & Release lifecycle begins when you `git push` to Dash Enterprise —
                 Dash Enterprise creates a new Docker image based off of the changes that you pushed
                 and will run the image as Docker containers when finished.
+
+                The same build process is used to create Dash apps, job queues and Dash Enterprise 
+                Workspaces.
+
+                ## Buildpack Detection
 
                 By including special files in your project folder, you can modify how Dash Enterprise builds,
                 deploys and releases your apps.
@@ -751,7 +757,7 @@ Requirements = html.Div(children=[
                 version, an `apt-packages` file if your app requires additional system-level packages like database
                 drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file
                 if you want to customize pre-release health checks. See [Files Reference](#optional-files) section
-                below for details.
+                below for more details.
 
 
                 A more complex project structure might look like this:
@@ -767,87 +773,149 @@ Requirements = html.Div(children=[
 
                 When you run `git push plotly master`, Dash Enterprise will do the following:
 
-                1. Create a new Docker container from builder image
-                2. Mount app source code
-                3. Detect which Buildpack to use based off of files present in app root folder
-                4. Install Python runtime environment — override with a `runtime.txt` file
-                5. Install APT packages: provided with `apt-packages` file
-                6. Install Python and app's Python dependencies with `requirement.txt` files
-                7. Run pre-deployment script specified in `app.json`
-                8. Scale containers for each process as specified in `DOKKU_SCALE`
-                9. Run commands in each container as specified in `Procfile`
-                10. Run pre-release app health checks with `CHECKS` file
-                11. Release: Open app to web traffic
-                12. Run post-deployment script specified in `app.json`
+                1. Mount app source code
+                2. Detect which Buildpack to use based off of files present in app root folder. 
+                   This Python & `pip` buildpack is detected by discovering the `requirements.txt` 
+                   file.
+                3. Install Python 3.6.10 — override the version with a `runtime.txt` file // TODO: py runtime version
+                4. Install custom APT packages if an `apt-packages` file is provided (optional)
+                5. Install Python app dependencies specified in `requirement.txt` file
+                6. Run a build script if an `app.json` file is included with a `"predeploy"` 
+                   field (optional). Changes made by this script will be committed to the Docker 
+                   image.
+                7. At this point, the Docker images have been created. In Dash Enterprise 
+                   Kubernetes, these images are pushed to the container registry.
+                9. Run the `release` command in the image if specified in the `Procfile` (optional)
+                10. Create Docker containers from the Docker image on the host (Dash Enterprise 
+                    Single Server) or in the Kubernetes cluster (Dash Enterprise Kubernetes). 
+                    The number of containers created for each process type can be configured with 
+                    the `DOKKU_SCALE` file (optional) or in the App Manager.
+                11. Run the `postdeploy` script in each container if the `app.json` file is 
+                    included (optional)
+                12. Run the commands as specified in `Procfile` in each container.
+                13. Run the app health checks. If the health checks fail, abort the deployment and 
+                    keep the previous containers running. Override the default health checks with 
+                    the `CHECKS` file (Dash Enterprise Single Server) or the `readiness` field in 
+                    the `app.json` file (Dash Enterprise Kubernetes)
+                14. Release: Open app to web traffic
+                15. Remove the old containers & images
+                16. Run periodic `liveness` checks on Dash Enterprise Kubernetes to ensure that 
+                    the app is still up and to restart it if not (not available on Dash Enterprise 
+                    Single Server)
+                17. Restart the deployment process every 24 hours on Dash Enterprise Kubernetes to 
+                    prevent long-running apps from going down (not available on Dash Enterprise Single Server).
+
+                > Steps 1-7 are used to create the Docker image for a Dash Enterprise Workspace and the 
+                > remaining steps to deploy the container are skipped.
 
                 ***
 
                 ### Required Files
 
-                #### app&#46;py
-
-                `app.py` is a required Python file that contains your Dash app's code. It must be placed in your project's root directory. This file must also contain a line that defines the `server` variable so that it can be
-                exposed for the `Procfile`:
-
-                ```python
-                import dash
-                import dash_design_kit as ddk
-                import dash_core_components as dcc
-                import dash_html_components as html
-                from dash.dependencies import Input, Output
-
-                app = dash.Dash(__name__)
-                server = app.server
-                ...
-                
-                ```
-
-                Dash App Templates including `app.py`:
-
-                - [Sample RAPIDS Application](https://dash-playground.plotly.host/Docs/templates/rapids-sample)
-                - [Managing Dependencies with Conda](https://dash-playground.plotly.host/Docs/templates/conda)
-                - [Managing Dependencies with Conda-Airgapped](https://dash-playground.plotly.host/Docs/templates/conda-airgapped)
-
-                Dash Enterprise app deployment will fail if `app.py` is not included in the project folder, or if
-                `app.py` does not contain `server = app.server`.
-
-                See [Common Errors]() chapter for details.
-
-                ***
-
                 #### requirements.txt
 
                 `requirements.txt` is a required text file that describes of all of your Dash app's Python
                 dependencies. During the deployment process, Dash Enterprise will install all of the
-                listed packages. Since Dash apps use `gunicorn` as their Python Web Server Gateway Interface
-                (WSGI) HTTP server, this file must include `gunicorn`.
-
+                listed packages. listed packages. Since Dash apps use `gunicorn` as their Python Web 
+                Server Gateway Interface
+                (WSGI) HTTP server, don't forget to include `gunicorn`!
+                
+                We recommend including all Python packages and their version numbers inside your 
+                `requirements.txt`.
+                
+                The packages and version numbers that are currently used in your development environment
+                can be inspected by running `pip freeze` in your terminal.
+                This will include all of the "subdependencies" of the packages that you rely on.
+                For example, `dash` itself relies on 17 other packages that have their own version numbers.
+                
+                If you don't include the subdependencies in your `requirements.txt` file, then Dash Enterprise 
+                will install the latest versions of these subdependencies when you deploy your app for the first time
+                or restart the application. This could mean that your deployed application uses different versions
+                of packages than your development environment which could cause unpredictable errors.
+                
+                Certain versions packages that you install on Windows may not be available on the Linux containers
+                that Dash Enterprise uses or vice versa. If you run into cross-operating system package issues,
+                we recommend using Dash Enterprise Workspaces.
+                
+                Redeploying the application will not reinstall dependencies unless you have changed 
+                the `requirements.txt` file.
+                
+                Here is an example of a `requirements.txt` file of an app that uses `dash`, 
+                `gunicorn`, `pandas`, `dash-design-kit`, and `dash-snapshots`.
+                This file was generated by running `pip freeze` with an environment that used the 
+                latest packages available as of December 2020 with Dash Enterprise 4.0.1.
+                
                 ```
-                dash-core-components==1.13.0
-                dash-html-components==1.1.1
-                dash-table==4.11.0
+                amqp==5.0.2
+                billiard==3.6.3.0
+                Brotli==1.0.9
+                celery==5.0.3
+                certifi==2020.11.8
+                cffi==1.14.4
+                chardet==3.0.4
+                click==7.1.2
+                click-didyoumean==0.0.3
+                click-plugins==1.1.1
+                click-repl==0.1.6
+                cryptography==3.2.1
                 dash==1.17.0
+                dash-core-components==1.13.0
+                dash-design-kit==1.5.4
+                dash-enterprise-auth==0.0.4
+                dash-html-components==1.1.1
+                dash-renderer==1.8.3
+                dash-snapshots==1.3.2
+                dash-table==4.11.0
+                Flask==1.1.2
+                Flask-Compress==1.8.0
+                Flask-SQLAlchemy==2.4.4
+                future==0.18.2
                 gunicorn==20.0.4
+                idna==2.10
+                importlib-metadata==3.1.1
+                itsdangerous==1.1.0
+                Jinja2==2.11.2
+                kombu==5.0.2
+                MarkupSafe==1.1.1
+                numpy==1.19.4
+                packaging==20.7
                 pandas==1.1.4
-
+                pg8000==1.16.6
+                plotly==4.13.0
+                prompt-toolkit==3.0.8
+                pycparser==2.20
+                PyJWT==1.7.1
+                pyOpenSSL==20.0.0
+                pyparsing==2.4.7
+                python-dateutil==2.8.1
+                pytz==2020.4
+                redis==3.5.3
+                requests==2.25.0
+                retrying==1.3.3
+                scramp==1.2.0
+                six==1.15.0
+                SQLAlchemy==1.3.20
+                urllib3==1.26.2
+                vine==5.0.0
+                wcwidth==0.2.5
+                Werkzeug==1.0.1
+                zipp==3.4.0
                 ```
+                You can supply additional options to the top of the file. See the official 
+                [requirements.txt documentation by pip](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
+                for more.
 
                 Dash App Templates including `requirements.txt`:
 
-                - [Dash App User Analytics](https://dash-playground.plotly.host/Docs/templates/dash-app-user-analytics)
-                - [JavaScript Example](https://dash-playground.plotly.host/Docs/templates/dash-embedded-javascript-example)
-                - [Vue JS Example](https://dash-playground.plotly.host/Docs/templates/dash-embedded-vue-example)
-                - [Angular JS Example](https://dash-playground.plotly.host/Docs/templates/dash-embedded-angular-example)
-                - [JWT Authentication Example](https://dash-playground.plotly.host/Docs/templates/dash-embedded-react-jwt-example)
+                All Dash Enterprise Python sample apps use `requirements.txt` files.
+                See [Dash Enterprise Template](/Docs/templates) for examples.
                 
                 Dash Enterprise app deployment will fail if `requirements.txt` is not included
                 in project folder, or if `gunicorn` is not listed in `requirements.txt`.
 
-                See [Common Errors]() chapter for details.
+                See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more details.
 
                 ***
-
-                // MARK: Procfile Python
 
                 #### Procfile
 
@@ -867,63 +935,97 @@ Requirements = html.Div(children=[
 
                 1. `web`
                 2. `release`
+                
+                
+                A simple Dash app `Procfile` will resemble the following:
+
+                ```
+                web: gunicorn app:server --workers 4
+                ```
+
+                A Dash app running  a background task queue will have `Procfile` similar to this:
+
+                ```
+                web: gunicorn app:server --workers 4
+                worker: celery -A app:celery_instance worker
+                ```
+
+                A Dash app periodically generating report with the Snapshot Engine might have 
+                `Procfile` like this:
+
+                ```
+                web: gunicorn index:server --workers 4
+                worker: celery -A index:celery_instance worker --concurrency=2
+                scheduler: celery -A index:celery_instance beat
+                ```
+                Note that `worker` and `scheduler` process names are arbitrary. 
+                We recommend using descriptive names as they will appear in all logs and in the 
+                app manager.
 
                 ##### web process
 
-                `web` is the only process type that can receive external HTTP traffic. We use
-                it to run `gunicorn`, your Dash app's web server. In the following example we are
-                declaring `gunicorn` as our web server with `web: gunicorn`:
+                `web` is the only process type that can receive external HTTP traffic. Use this
+                to run your Dash app with `gunicorn`, your Dash app's web server. In the following 
+                example we are declaring `gunicorn` as our web server with `web: gunicorn`:
 
                 ```
                 web: gunicorn app:server --workers 4
 
                 ```
 
-                Here we have `app` that refers to the file `app.py` and `server` refers to the
-                variable named `server` inside that file. `gunicorn` is the web server that will
-                run your Dash app, make sure to add this in your `requirements.txt` file.
+                These commands are [standard `gunicorn` commands](https://docs.gunicorn.org/en/latest/run.html).
+        
+                `gunicorn` accepts a [wide variety of settings](https://docs.gunicorn.org/en/latest/settings.html). 
+                Here are a few common flags:
 
-                With `gunicorn` as your app's web server, you may also use the following flags:
+                
+                1. `--workers` specifies the number worker processes that are being used to run the Dash app. 
+                   This is typically between 2 and 8. Adding workers will enable your application to serve more 
+                   users at once but will increase the CPU & memory usage.
 
-                1. `--workers`
-                2. `--timeout`
-                3. `--preload`
+                   See [Gunicorn Docs on Workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers) 
+                   for more details.
 
-                ###### --workers 
-         
-                `--workers` allows you to select the number of worker processes. This number should be between 2-4 workers per core in the server. See [Gunicorn Docs on Workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers) for details.
+                   ```
+                   web: gunicorn app:server --workers 4
 
-                ```
-                web: gunicorn app:server --workers 4
+                   ```
 
-                ```
+                2. `--timeout` allows you to modify the default amount of time available for your workers to complete
+                   a task. 
+                   
+                   See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) for
+                   details.
 
-                ###### --timeout
+                   ```
+                   web: gunicorn app:server --workers 4 --timeout 240
 
-                `--timeout` allows you to modify the default amount of time available for your workers to complete
-                a task. See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) for
-                details.
+                   ```
+                
+                3. Use the `--preload` flag to reduce your application's memory and speed up boot time. 
+                   Avoid the `--preload` flag if you are using shared database connection pools
+                   see [Database Connections](/dash-enterprise/database-connections).
+                
+                   See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) 
+                   for more details.
 
-                ```
-                web: gunicorn app:server --workers 4 --timeout 240
+                   ```
+                   web: gunicorn app:server --workers 4 --preload
 
-                ```
-
-                ###### --preload
-
-                `--preload` flag should be used when you are experiencing slow app boot times or memory constraints.  See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) for details.
-
-                ```
-                web: gunicorn app:server --workers 4 --preload
-                ```
+                   ```
 
                 ##### release process
 
                 `release` is a process type only used to run commands during your app's release
                 phase and is rarely required for Dash apps.
 
-                In following example we are setting our `release-task.sh` script to auto-run before a new release
-                with `release: ./release-tasks.sh`. See [Heroku Docs on Release Phase](https://devcenter.heroku.com/articles/release-phase) for details.
+                In following example, the `release-task.sh` would be run. This script might be priming or
+                invalidating cache stores, running database schema migrations, or 
+                send datasets, CSS, JS or other assets from your app’s image to a CDN or S3 bucket.
+
+                You can also run other background processes in their own containers.
+                For example, you may run a background job queue to periodically 
+                update your application's data, generate snapshots, or process long-running tasks:
 
                 ```
                 release: ./release-tasks.sh
@@ -945,32 +1047,73 @@ Requirements = html.Div(children=[
 
                 ```
 
-                As was mentioned earlier, process type names are arbitrary other than `web` and `release` which have special 
-                properties. Names should be descriptive. In this example, we have called the process responsible for task and job scheduling `worker`.
+                Note that the name `worker` is arbitrary. However, we recommend using descriptive 
+                names as they will appear in logs and in the App Manager. `web` & `release` are the 
+                only reserved names.
 
-                Note that a `DOKKU_SCALE` file must be added to your app's root directory if you use processes other than `web` and `release` in your `Procfile`.
+                Note that a `DOKKU_SCALE` should must be added to your app's root directory if you 
+                use processes other than `web` and `release` in your `Procfile`.
 
-                Dash Enterprise app deployment will fail if a `DOKKU_SCALE` file is not detected.
-
-                See [Common Errors]() chapter for more details.
+                Without a `DOKKU_SCALE` file, the containers corresponding to these other processes 
+                will not be scaled automatically. Instead, they would need to be scaled in the App 
+                Manager's "Resources" page.
 
                 Dash App Templates including `Procfile`:
 
-                - [Share Data Between Multiple Pages](https://dash-playground.plotly.host/Docs/templates/multi-page-data-sharing)
-                - [Dash Notes - Saving Notes & Comments with Redis](https://dash-playground.plotly.host/Docs/templates/redis-notes-persistence)
-                - [Platform Analytics App](https://dash-playground.plotly.host/Docs/templates/platform-analytics)
+                1. [A simple Procfile with `web`](/Docs/templates/sample-app)
+                2. [A Procfile that loads prepares data before running gunicorn](/Docs/templates/vaex-sample)
+                3. [A Procfile that runs a background job queue](/Docs/templates/snapshots-single-page)
+                4. [A Procfile that runs a background job queue on a schedule](/Docs/templates/snapshots-scheduled-reports)
+                
+                ***
+
+                #### app&#46;py
+
+                By convention, this is usually called `app.py` or `index.py`. This file that is 
+                called by the command you specify in your `Procfile`. It will contain your Python
+                code.
+                
+                It must be placed in your project's root directory. This file must also contain a 
+                line that defines the `server` variable so that it can be exposed for the 
+                `Procfile`:
+
+                ```python
+                import dash
+                import dash_design_kit as ddk
+                import dash_core_components as dcc
+                import dash_html_components as htmlhttps://dash-playground.plotly.host/Docs/templates/snapshots-notes-persistence
+                from dash.dependencies import Input, Output
+
+                app = dash.Dash(__name__)
+                server = app.server
+                ...
+                
+                ```
+
+                Dash App Templates including `app.py` or `index.py`:
+
+                - [An app that uses app.py](https://dash-playground.plotly.host/Docs/templates/rapids-sample)
+                - [An app that uses app.py](https://dash-playground.plotly.host/Docs/templates/oracle-sample-app)
+                - [An app that uses index.py](https://dash-playground.plotly.host/Docs/templates/snapshots-scheduled-reports)
+                - [An app that uses index.py](https://dash-playground.plotly.host/Docs/templates/snapshots-notes-persistence)
+                
+                Dash Enterprise app deployment will fail if `app.py` is not included in the project folder, or if
+                `app.py` does not contain `server = app.server`.
+
+                See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more details.
 
                 ***
 
-                ### Optional Files
+                ## Optional Files
 
-                // MARK: CHECKS Python
-
-                #### CHECKS
-
+                #### CHECKS // TODO: reference dash-enterprise/checks
 
                 `CHECKS` is an optional text file that allows you to precisely modify Dash 
-                Enterprise's app health diagnostic checks.  
+                Enterprise's app health diagnostic checks. 
+
+                > `CHECKS` is only available on Dash Enterprise Single Server. Similar functionality 
+                > for Dash Enterprise Kubernetes is available via the `app.json` file. See 
+                > [Dash Enterprise Kubernetes](/Docs/kubernetes) page for more details. 
                 
                 By default, Dash Enterprise will wait 10 seconds after starting each container 
                 before assuming it is up and proceeding with the deployment. Once this happens for 
@@ -1071,7 +1214,7 @@ Requirements = html.Div(children=[
                 .env
                 ```
 
-                #### runtime.txt
+                #### runtime.txt // TODO: py runtime version
 
                 `runtime.txt` is an optional text file that specifies your Dash app's Python runtime environment.
                 It must be placed in your app's root directory.
@@ -1085,7 +1228,11 @@ Requirements = html.Div(children=[
 
                 ***
 
-                #### DOKKU_SCALE
+                #### app.json // TODO: app.json
+
+                ( http://dokku.viewdocs.io/dokku/advanced-usage/deployment-tasks/)
+
+                #### DOKKU_SCALE // TODO: dokku_scale -> see procfile section
 
                 `DOKKU_SCALE` is an optional text file used for manual process and container management. 
                 It is required when using a `worker` process in your `Procfile`, and must be
@@ -1117,10 +1264,12 @@ Requirements = html.Div(children=[
 
                 #### APT files
 
-                APT files are used to extend the base image in the build process.
+                APT files can be used to install system-level packages via the `apt` package manager.
                 Supported APT files include the following:
 
                 ```
+                apt-packages
+                dpkg-packages
                 apt-conf
                 apt-env
                 apt-keys
@@ -1128,16 +1277,57 @@ Requirements = html.Div(children=[
                 apt-sources-list
                 apt-repositories
                 apt-debconf
-                apt-packages
-                dpkg-packages
-
                 ```
 
                 ***
+                
+                #### apt-packages // TODO: apt-packages examples drivers/vim/nano/emacs
 
+                `apt-packages` is an optional text file required when apt packages need to be 
+                installed on a per app basis. For example, data base drivers.
+
+                This file should contain APT packages to install. It accepts multiple packages per 
+                line, and multiple lines.
+
+                If this file is included, an `apt-get update` is triggered beforehand durning app 
+                deployment.
+
+                ```shell
+                nginx
+                unifont
+                ```
+
+                Dash App Templates including `apt-packages`:
+
+                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
+                - [Oracle Sample App](https://dash-playground.plotly.host/Docs/templates/oracle-sample-app)
+                - [pyodbc Sample App](https://dash-playground.plotly.host/Docs/templates/pyodbc-sample-app)
+                - [MS SQL Server Sample App](https://dash-playground.plotly.host/Docs/templates/mssql-pyodbc-sample-app)
+                - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
+
+                ***
+                
+                #### dpkg-packages
+
+                `dpkg-packages` is an optional directory holding .deb packages to be installed 
+                automatically after apt-packages, apt-repositories and apt-debconf. Allows the 
+                installation of custom packages inside the container.
+
+                Packages are installed in lexicographical order. As such, if any packages depend 
+                upon one another, that dependency tree should be figured out beforehand.
+
+                ```shell
+                $ ls dpkg-packages/
+                your-package-0_0.0.1.deb
+                ```
+
+                ***
                 #### apt-conf
 
-                `apt-conf` is an optional config file for `APT`, as documented [here](https://linux.die.net/man/5/apt.conf). This is moved to the folder /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come before it in lexicographical order.
+                `apt-conf` is an optional config file for `APT`. This is moved to the folder 
+                /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come 
+                before it in lexicographical order. See [apt.conf Linux man page](https://linux.die.net/man/5/apt.conf) entry
+                for more details.
 
                 ```
                 Acquire::http::Proxy "http://user:password@proxy.example.com:8888/";
@@ -1147,42 +1337,46 @@ Requirements = html.Div(children=[
 
                 #### apt-env
 
-                `apt-env` is an optional text file that can contain environment variables. Note that this is sourced, and should not contain arbitrary code.
+                `apt-env` is an optional text file that can contain environment variables. 
+                Note that this is sourced, and should not contain arbitrary code.
 
                 ```
                 export ACCEPT_EULA=y
-
                 ```
 
                 ***
 
                 #### apt-keys
 
-                `apt-keys` is an optional text file that can contain a list of urls for apt repository keys. Each one is installed via `curl "$KEY_URL" | apt-key add -`. Redirects are not followed. The `sha256sum` of the key contents will be displayed to allow for key verification.
+                `apt-keys` is an optional text file that can contain a list of urls for apt 
+                repository keys. Each one is installed via `curl "$KEY_URL" | apt-key add -`. 
+                Redirects are not followed. The `sha256sum` of the key contents will be displayed 
+                to allow for key verification.
 
                 ```
                 https://packages.example.com/keys/example.asc
-
                 ```
 
                 ***
 
                 #### apt-preferences
 
-                A file that contains [APT Preferences](https://wiki.debian.org/AptConfiguration?action=show&redirect=AptPreferences). This file is not validated for correctness, and is installed to `/etc/apt/preferences.d/90customizations`.
+                A file that contains [APT Preferences](https://wiki.debian.org/AptConfiguration?action=show&redirect=AptPreferences). 
+                This file is not validated for correctness, and is installed to 
+                `/etc/apt/preferences.d/90customizations`.
 
                 ```json
                 APT {
                 Install-Recommends "false";
                 }
-
                 ```
 
                 ***
 
                 #### apt-sources-list
 
-                `apt-sources-list` is an optional text file that overrides the /etc/apt/sources.list file. An empty file may be provided in order to remove upstream packages.
+                `apt-sources-list` is an optional text file that overrides the /etc/apt/sources.list
+                 file. An empty file may be provided in order to remove upstream packages.
 
                 ```
                 deb http://archive.ubuntu.com/ubuntu/ bionic main universe
@@ -1197,39 +1391,18 @@ Requirements = html.Div(children=[
 
                 ***
 
-                #### apt-packages
-
-                `apt-packages` is an optional text file required when apt packages need to be installed on a per app basis. For example, data base drivers.
-
-                This file should contain APT packages to install. It accepts multiple packages per line, and multiple lines.
-
-                If this file is included, an `apt-get update` is triggered beforehand durning app deployment.
-
-                ```
-                nginx
-                unifont
-
-                ```
-
-                Dash App Templates including `apt-packages`:
-
-                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
-                - [Oracle Sample App](https://dash-playground.plotly.host/Docs/templates/oracle-sample-app)
-                - [pyodbc Sample App](https://dash-playground.plotly.host/Docs/templates/pyodbc-sample-app)
-                - [MS SQL Server Sample App](https://dash-playground.plotly.host/Docs/templates/mssql-pyodbc-sample-app)
-                - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
-
-                ***
-
                 #### apt-repositories
 
-                `apt-repositories` is an optional text file that should contain additional APT repositories to configure to find packages.
+                `apt-repositories` is an optional text file that should contain additional APT 
+                repositories to configure to find packages.
 
-                If this file is included, an apt-get update is triggered, and the packages `software-properties-common` and `apt-transport-https` are installed. Both these actions happen before any repositories are added.
+                If this file is included, an apt-get update is triggered, and the packages 
+                `software-properties-common` and `apt-transport-https` are installed. Both these 
+                actions happen before any repositories are added.
 
                 Requires an empty line at end of file.
 
-                ```
+                ```shell
                 ppa:nginx/stable
                 deb http://archive.ubuntu.com/ubuntu quantal multiverse
 
@@ -1239,40 +1412,32 @@ Requirements = html.Div(children=[
 
                 #### apt-debconf
 
-                `apt-debconf`is an optional text file allowing to configure package installation. Use case is mainly for EULA (like ttf-mscorefonts-installer). Requires an empty line at end of file.
+                `apt-debconf`is an optional text file allowing to configure package installation. 
+                Use case is mainly for EULA (like ttf-mscorefonts-installer). Requires an empty 
+                line at end of file.
 
-                ```
+                ```shell
                 ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true
                 ```
 
-                ***
-
-                #### dpkg-packages
-
-                `dpkg-packages` is an optional directory holding .deb packages to be installed automatically after apt-packages, apt-repositories and apt-debconf. Allows the installation of custom packages inside the container.
-
-                Packages are installed in lexicographical order. As such, if any packages depend upon one another, that dependency tree should be figured out beforehand.
-
-                ```shell
-                $ ls dpkg-packages/
-                your-package-0_0.0.1.deb
-
-                ```
                 ***
                 
                 '''
                 ),
             ])
-        ]),
+        ]),                
         dcc.Tab(label='Python (Conda)', children=[
             html.Div([
                 rc.Markdown(
                 '''
+                //MARK: Conda Start
                 ## Dash App Deployment & Release Lifecycles
 
                 The Deployment & Release lifecycle begins when you `git push` to Dash Enterprise —
                 Dash Enterprise creates a new Docker image based off of the changes that you pushed
                 and will run the image as Docker containers when finished.
+
+                ## Buildpack Detection
 
                 By including special files in your project folder, you can modify how Dash Enterprise builds,
                 deploys and releases your apps.
@@ -1287,7 +1452,8 @@ Requirements = html.Div(children=[
                 To deploy an app with Dash Enterprise and Conda, two additional files are needed:
 
                 1. A `conda-requirements.txt` file to describe your app's dependencies
-                2. A `Procfile` to declare what commands & processes should be run to run the Dash app and any other background processes
+                2. A `Procfile` to declare what commands & processes should be run to run the Dash 
+                app and any other background processes
 
                 A minimal project structure might look like this:
 
@@ -1301,7 +1467,7 @@ Requirements = html.Div(children=[
                 version, an `apt-packages` file if your app requires additional system-level packages like database
                 drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file
                 if you want to customize pre-release health checks. See [Files Reference](#optional-files) section
-                below for details.
+                below for more details.
 
 
                 A more complex project structure might look like this:
@@ -1336,8 +1502,13 @@ Requirements = html.Div(children=[
 
                 #### app&#46;py
 
-                `app.py` is a required Python file that contains your Dash app's code. It must be placed in your project's root directory. This file must also contain a line that defines the `server` variable so that it can be
-                exposed for the `Procfile`:
+                By convention, this is usually called `app.py` or `index.py`. This file that is 
+                called by the command you specify in your `Procfile`. It will contain your Python
+                code.
+                
+                It must be placed in your project's root directory. This file must also contain a 
+                line that defines the `server` variable so that it can be exposed for the 
+                `Procfile`:
 
                 ```python
                 import dash
@@ -1348,25 +1519,26 @@ Requirements = html.Div(children=[
 
                 app = dash.Dash(__name__)
                 server = app.server
-
                 ...
-
+                
                 ```
 
+                Dash App Templates including `app.py` or `index.py`:
+
+                - [An app that uses app.py](https://dash-playground.plotly.host/Docs/templates/rapids-sample)
+                - [An app that uses app.py](https://dash-playground.plotly.host/Docs/templates/oracle-sample-app)
+                - [An app that uses index.py](https://dash-playground.plotly.host/Docs/templates/snapshots-scheduled-reports)
+                - [An app that uses index.py](https://dash-playground.plotly.host/Docs/templates/snapshots-notes-persistence)
+                
                 Dash Enterprise app deployment will fail if `app.py` is not included in the project folder, or if
                 `app.py` does not contain `server = app.server`.
 
-                See [Common Errors]() chapter for details.
-
-                Dash App Templates including `app.py`:
-
-                - [Sample RAPIDS Application](https://dash-playground.plotly.host/Docs/templates/rapids-sample)
-                - [Managing Dependencies with Conda](https://dash-playground.plotly.host/Docs/templates/conda)
-                - [Managing Dependencies with Conda-Airgapped](https://dash-playground.plotly.host/Docs/templates/conda-airgapped)
-
+                See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more details.
 
                 ***
-                #### conda-buildpacks
+
+                // TODO: buildpack Conda
+                #### buildpack 
 
                 `conda-buildpacks` is a required package needed to enable the installation of binary 
                 packages through the open-source `conda` application.
@@ -1382,7 +1554,7 @@ Requirements = html.Div(children=[
                 `conda-requirements.txt` is a required text file that describes of all of your Dash app's Python
                 dependencies. During the deployment process, Dash Enterprise will install all of the
                 listed packages. Since Dash apps use `gunicorn` as their Python Web Server Gateway Interface
-                (WSGI) HTTP server, this file must include `gunicorn`.
+                (WSGI) HTTP server, this file must include `gunicorn`. It is used by Dash Enterprise to 
 
                 ```
                 dash-core-components==1.13.0
@@ -1397,7 +1569,7 @@ Requirements = html.Div(children=[
                 Dash Enterprise app deployment with Conda will fail if `conda-requirements.txt` is not included
                 in project folder, or if `gunicorn` is not listed in `conda-requirements.txt`.
 
-                See [Common Errors]() chapter for details.
+                See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more details.
 
                 Dash App Templates including `conda-requirements.txt`:
 
@@ -1406,10 +1578,8 @@ Requirements = html.Div(children=[
                 - [Managing Dependencies with Conda-Airgapped](https://dash-playground.plotly.host/Docs/templates/conda-airgapped)
 
                 ***
-                
-                // MARK: Procfile Conda
 
-                #### Procfile
+                 #### Procfile
 
                 `Procfile` is a required text file that declares which commands are run by your Dash app on
                 startup like starting your app's web server, scheduling jobs and running background processes.
@@ -1427,63 +1597,110 @@ Requirements = html.Div(children=[
 
                 1. `web`
                 2. `release`
+                
+                
+                A simple Dash app `Procfile` will resemble the following:
+
+                ```
+                web: gunicorn app:server --workers 4
+                ```
+
+                A Dash app running  a background task queue will have `Procfile` similar to this:
+
+                ```
+                web: gunicorn app:server --workers 4
+                worker: celery -A app:celery_instance worker
+                ```
+
+                A Dash app running generating report with the Snapshot Engine will have `Procfile` like this:
+
+                ```
+                web: gunicorn index:server --workers 4
+                worker: celery -A index:celery_instance worker --concurrency=2
+                scheduler: celery -A index:celery_instance beat
+                ```
+                Note that `worker` and `scheduler` process names are arbitrary. 
+                We recommend using desciptive names as they will appear in all logs  and in the 
+                app manager.
 
                 ##### web process
 
-                `web` is the only process type that can receive external HTTP traffic. We use
-                it to run `gunicorn`, your Dash app's web server. In the following example we are
-                declaring `gunicorn` as our web server with `web: gunicorn`:
+                `web` is the only process type that can receive external HTTP traffic. Use this
+                to run your Dash app with `gunicorn`, your Dash app's web server. In the following 
+                example we aretelling Dash Enterprise to run this `gunicorn` command when deploying 
+                the application:
 
                 ```
                 web: gunicorn app:server --workers 4
 
                 ```
 
-                Here we have `app` that refers to the file `app.py` and `server` refers to the
+                In this command `app` refers to a file named `app.py` and `server` refers to the
                 variable named `server` inside that file. `gunicorn` is the web server that will
-                run your Dash app, make sure to add this in your `conda-requirements.txt` file.
+                run your Dash app, make sure to add this in your `requirements.txt` file.
 
-                With `gunicorn` as your app's web server, you may also use the following flags:
-
-                1. `--workers`
-                2. `--timeout`
-                3. `--preload`
-
-                ###### --workers 
-         
-                `--workers` allows you to select the number of worker processes. This number should be between 2-4 workers per core in the server. See [Gunicorn Docs on Workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers) for details.
-
+                If the entrypoint of your app has a different file name like index.py the the 
+                `Procfile` will look like: 
+                
                 ```
-                web: gunicorn app:server --workers 4
-
+                web: gunicorn index:server --workers 4
                 ```
 
-                ###### --timeout
+                ```suggestion
+                These commands are [standard `gunicorn` commands](https://docs.gunicorn.org/en/latest/run.html).
+        
+                `gunicorn` accepts a [wide variety of settings](https://docs.gunicorn.org/en/latest/settings.html). 
+                Here are a few common flags:
 
-                `--timeout` allows you to modify the default amount of time available for your workers to complete
-                a task. See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) for
-                details.
+                
+                1. `--workers` specifies the number worker processes that are being used to run the Dash app. 
+                   This is typically between 2 and 8. Adding workers will enable your application to serve more 
+                   users at once but will increase the CPU & memory usage.
+                   See [Gunicorn Docs on Workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers) 
+                   for more details.
+
+                   ```
+                   web: gunicorn app:server --workers 4
+
+                   ```
+
+               
+                2. `--timeout` allows you to modify the default amount of time available for your workers to complete
+                   a task. See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) for
+                   details.
+
+                   ```
+                   web: gunicorn app:server --workers 4 --timeout 240
+
+                   ```
+
+                
+                3. Use the `--preload` flag to reduce your application's memory and speed up boot time. 
+                   Avoid the `--preload` flag if you are using shared database connection pools
+                   see [Database Connections](/dash-enterprise/database-connections).
+                
+                   See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) 
+                   for more details.
+
+                   ```
+                   web: gunicorn app:server --workers 4 --preload
+
+                   ```
 
                 ```
-                web: gunicorn app:server --workers 4 --timeout 240
 
-                ```
-
-                ###### --preload
-
-                `--preload` flag should be used when you are experiencing slow app boot times or memory constraints.  See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) for details.
-
-                ```
-                web: gunicorn app:server --workers 4 --preload
-                ```
-
-                ##### release process
+                 ##### release process
 
                 `release` is a process type only used to run commands during your app's release
                 phase and is rarely required for Dash apps.
 
-                In following example we are setting our `release-task.sh` script to auto-run before a new release
-                with `release: ./release-tasks.sh`. See [Heroku Docs on Release Phase](https://devcenter.heroku.com/articles/release-phase) for details.
+                In following example, the `release-task.sh` would be run. This script might priming or
+                invalidating cache stores, running database schema migrations, or 
+                send datasets, CSS, JS or other assets from your app’s image to a CDN or S3 bucket.
+
+                You can also run other background processes in their own containers.
+                For example, you may run a background job queue to periodically 
+                update your application's data, generate snapshots, or process long-running tasks:
 
                 ```
                 release: ./release-tasks.sh
@@ -1505,29 +1722,30 @@ Requirements = html.Div(children=[
 
                 ```
 
-                As was mentioned earlier, process type names are arbitrary other than `web` and `release` which have special 
-                properties. Names should be descriptive. In this example, we have called the process responsible for task and job scheduling `worker`.
+                Note that the name `worker` is arbitrary. However, we recommend using descriptive 
+                names as they will appear in logs and in the App Manager. `web` & `release` are the 
+                only reserved names.
 
-                Note that a `DOKKU_SCALE` file must be added to your app's root directory if you use processes other than `web` and `release` in your `Procfile`.
+                Also note that a `DOKKU_SCALE` file must be added to your app's root directory if 
+                you use processes other than `web` and `release` in your `Procfile`.
 
                 Dash Enterprise app deployment will fail if a `DOKKU_SCALE` file is not detected.
 
-                See [Common Errors]() chapter for more details.
-
-                Dash App Templates including `Procfile`:
-
+                See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more 
+                details.
 
                 ***
 
-                ### Optional Files
-
-                // MARK: CHECKS Conda
+                ## Optional Files
 
                 #### CHECKS
 
-
                 `CHECKS` is an optional text file that allows you to precisely modify Dash 
-                Enterprise's app health diagnostic checks.  
+                Enterprise's app health diagnostic checks. 
+
+                > `CHECKS` is only available on Dash Enterprise Single Server. Similar functionality 
+                > for Dash Enterprise Kubernetes is available via the `app.json` file. See 
+                > [Dash Enterprise Kubernetes](/Docs/kubernetes) page for more details. 
                 
                 By default, Dash Enterprise will wait 10 seconds after starting each container 
                 before assuming it is up and proceeding with the deployment. Once this happens for 
@@ -1678,13 +1896,15 @@ Requirements = html.Div(children=[
                 - [Background Task Queue and Viewing Previous Results](https://dash-playground.plotly.host/Docs/templates/snapshots-results-on-same-page-with-archive)
 
                 ***
-
+                
                 #### APT files
 
-                APT files are used to extend the base image in the build process.
+                APT files can be used to install system-level packages via the `apt` package manager.
                 Supported APT files include the following:
 
                 ```
+                apt-packages
+                dpkg-packages
                 apt-conf
                 apt-env
                 apt-keys
@@ -1692,16 +1912,57 @@ Requirements = html.Div(children=[
                 apt-sources-list
                 apt-repositories
                 apt-debconf
-                apt-packages
-                dpkg-packages
-
                 ```
 
                 ***
+                
+                #### apt-packages
 
+                `apt-packages` is an optional text file required when apt packages need to be 
+                installed on a per app basis. For example, data base drivers.
+
+                This file should contain APT packages to install. It accepts multiple packages per 
+                line, and multiple lines.
+
+                If this file is included, an `apt-get update` is triggered beforehand durning app 
+                deployment.
+
+                ```shell
+                nginx
+                unifont
+                ```
+
+                Dash App Templates including `apt-packages`:
+
+                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
+                - [Oracle Sample App](https://dash-playground.plotly.host/Docs/templates/oracle-sample-app)
+                - [pyodbc Sample App](https://dash-playground.plotly.host/Docs/templates/pyodbc-sample-app)
+                - [MS SQL Server Sample App](https://dash-playground.plotly.host/Docs/templates/mssql-pyodbc-sample-app)
+                - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
+
+                ***
+                
+                #### dpkg-packages
+
+                `dpkg-packages` is an optional directory holding .deb packages to be installed 
+                automatically after apt-packages, apt-repositories and apt-debconf. Allows the 
+                installation of custom packages inside the container.
+
+                Packages are installed in lexicographical order. As such, if any packages depend 
+                upon one another, that dependency tree should be figured out beforehand.
+
+                ```shell
+                $ ls dpkg-packages/
+                your-package-0_0.0.1.deb
+                ```
+
+                ***
                 #### apt-conf
 
-                `apt-conf` is an optional config file for `APT`, as documented [here](https://linux.die.net/man/5/apt.conf). This is moved to the folder /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come before it in lexicographical order.
+                `apt-conf` is an optional config file for `APT`. This is moved to the folder 
+                /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come 
+                before it in lexicographical order. See [apt.conf Linux man page](https://linux.die.net/man/5/apt.conf) 
+                entry for more details.
 
                 ```
                 Acquire::http::Proxy "http://user:password@proxy.example.com:8888/";
@@ -1711,42 +1972,47 @@ Requirements = html.Div(children=[
 
                 #### apt-env
 
-                `apt-env` is an optional text file that can contain environment variables. Note that this is sourced, and should not contain arbitrary code.
+                `apt-env` is an optional text file that can contain environment variables. Note that
+                this is sourced, and should not contain arbitrary code.
 
                 ```
                 export ACCEPT_EULA=y
-
                 ```
 
                 ***
 
                 #### apt-keys
 
-                `apt-keys` is an optional text file that can contain a list of urls for apt repository keys. Each one is installed via `curl "$KEY_URL" | apt-key add -`. Redirects are not followed. The `sha256sum` of the key contents will be displayed to allow for key verification.
+                `apt-keys` is an optional text file that can contain a list of urls for apt 
+                repository keys. Each one is installed via `curl "$KEY_URL" | apt-key add -`. 
+                Redirects are not followed. The `sha256sum` of the key contents will be displayed 
+                to allow for key verification.
 
                 ```
                 https://packages.example.com/keys/example.asc
-
                 ```
 
                 ***
 
                 #### apt-preferences
 
-                A file that contains [APT Preferences](https://wiki.debian.org/AptConfiguration?action=show&redirect=AptPreferences). This file is not validated for correctness, and is installed to `/etc/apt/preferences.d/90customizations`.
+                A file that contains [APT Preferences](https://wiki.debian.org/AptConfiguration?action=show&redirect=AptPreferences). 
+                This file is not validated for correctness, and is installed to 
+                `/etc/apt/preferences.d/90customizations`.
 
                 ```json
                 APT {
                 Install-Recommends "false";
                 }
-
                 ```
 
                 ***
 
                 #### apt-sources-list
 
-                `apt-sources-list` is an optional text file that overrides the /etc/apt/sources.list file. An empty file may be provided in order to remove upstream packages.
+                `apt-sources-list` is an optional text file that overrides the 
+                `/etc/apt/sources.list` file. An empty file may be provided in order to remove
+                upstream packages.
 
                 ```
                 deb http://archive.ubuntu.com/ubuntu/ bionic main universe
@@ -1761,39 +2027,18 @@ Requirements = html.Div(children=[
 
                 ***
 
-                #### apt-packages
-
-                `apt-packages` is an optional text file required when apt packages need to be installed on a per app basis. For example, data base drivers.
-
-                This file should contain APT packages to install. It accepts multiple packages per line, and multiple lines.
-
-                If this file is included, an `apt-get update` is triggered beforehand durning app deployment.
-
-                ```
-                nginx
-                unifont
-
-                ```
-
-                Dash App Templates including `apt-packages`:
-
-                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
-                - [Oracle Sample App](https://dash-playground.plotly.host/Docs/templates/oracle-sample-app)
-                - [pyodbc Sample App](https://dash-playground.plotly.host/Docs/templates/pyodbc-sample-app)
-                - [MS SQL Server Sample App](https://dash-playground.plotly.host/Docs/templates/mssql-pyodbc-sample-app)
-                - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
-
-                ***
-
                 #### apt-repositories
 
-                `apt-repositories` is an optional text file that should contain additional APT repositories to configure to find packages.
+                `apt-repositories` is an optional text file that should contain additional APT 
+                repositories to configure to find packages.
 
-                If this file is included, an apt-get update is triggered, and the packages `software-properties-common` and `apt-transport-https` are installed. Both these actions happen before any repositories are added.
+                If this file is included, an apt-get update is triggered, and the packages 
+                `software-properties-common` and `apt-transport-https` are installed. Both 
+                these actions happen before any repositories are added.
 
                 Requires an empty line at end of file.
 
-                ```
+                ```shell
                 ppa:nginx/stable
                 deb http://archive.ubuntu.com/ubuntu quantal multiverse
 
@@ -1803,24 +2048,12 @@ Requirements = html.Div(children=[
 
                 #### apt-debconf
 
-                `apt-debconf`is an optional text file allowing to configure package installation. Use case is mainly for EULA (like ttf-mscorefonts-installer). Requires an empty line at end of file.
-
-                ```
-                ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true
-                ```
-
-                ***
-
-                #### dpkg-packages
-
-                `dpkg-packages` is an optional directory holding .deb packages to be installed automatically after apt-packages, apt-repositories and apt-debconf. Allows the installation of custom packages inside the container.
-
-                Packages are installed in lexicographical order. As such, if any packages depend upon one another, that dependency tree should be figured out beforehand.
+                `apt-debconf`is an optional text file allowing to configure package installation. 
+                Use case is mainly for EULA (like ttf-mscorefonts-installer). Requires an empty 
+                line at end of file.
 
                 ```shell
-                $ ls dpkg-packages/
-                your-package-0_0.0.1.deb
-
+                ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true
                 ```
 
                 ***
@@ -1836,11 +2069,14 @@ Requirements = html.Div(children=[
             html.Div([
                 rc.Markdown(
                 '''
+                // MARK: R Start
                 ## Dash App Deployment & Release Lifecycles
 
                 The Deployment & Release lifecycle begins when you `git push` to Dash Enterprise —
                 Dash Enterprise creates a new Docker image based off of the changes that you pushed
                 and will run the image as Docker containers when finished.
+
+                ## Buildpack Detection
 
                 By including special files in your project folder, you can modify how Dash Enterprise builds,
                 deploys and releases your apps.
@@ -1850,13 +2086,17 @@ Requirements = html.Div(children=[
                 that is then run as a container on the Dash Enterprise server or the Kubernetes cluster.
                 It's a higher-level abstraction of a Dockerfile.
 
+                Dash Enterprise is shipped with custom buildpacks for Python, Conda and R.
+
                 ## Application Structure
                 
                 To deploy a Dash R app with Dash Enterprise, three additional files are needed:
 
-                1. A `requirements.txt` file to describe your app's dependencies
-                2. A `Procfile` to declare what commands & processes should be run to run the Dash app and any other background processes
-                3. An R `buildpacks` to transfer your app's code into the Docker image that is later run on the Dash Enterprise Server or Kubernetes cluster
+                1. A `init.R` file to describe your app's dependencies
+                2. A `Procfile` to declare what commands & processes should be run to run the Dash 
+                   app and any other background processes 
+                3. An R `buildpack` to transfer your app's code into the Docker image that is later
+                   run on the Dash Enterprise Server or Kubernetes cluster
 
                 A minimal project structure might look like this:
 
@@ -1867,11 +2107,12 @@ Requirements = html.Div(children=[
                 |-- .buildpacks
                 ```
 
-                You may also include optional files such as a `runtime.txt` file if you want to specify your R
-                version, an `apt-packages` file if your app requires additional system-level packages like database
-                drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file
-                if you want to customize pre-release health checks. See [Files Reference](#optional-files) section
-                below for details.
+                You may also include optional files such as a `runtime.txt` file if you want to 
+                specify your R version, an `apt-packages` file if your app requires additional 
+                system-level packages like database drivers, an `app.json` file if you want to call 
+                scripts when deploying changes, or a `CHECKS` file if you want to customize 
+                pre-release health checks. See [Files Reference](#optional-files) section
+                below for more details.
 
 
                 A more complex project structure might look like this:
@@ -1922,7 +2163,7 @@ Requirements = html.Div(children=[
                 Dash Enterprise app deployment will fail if `app.R` is not included in the project folder, or if
                 `app.R` does not contain `app$run_server()`.
 
-                See [Common Errors]() chapter for details.
+                See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more details.
 
                 ***
 
@@ -1937,8 +2178,6 @@ Requirements = html.Div(children=[
                 ```
 
                 ***
-                
-                // MARK: Procfile R
 
                 #### Procfile
 
@@ -1948,22 +2187,6 @@ Requirements = html.Div(children=[
 
                 ***
 
-                // MARK: Buildpacks R
-
-                #### .buildpacks
-
-                Specifies the buildpack used by the R application to provide a base environment
-                for deployment. This file should contain a URL to the buildpack and the relevant
-                branch, unless the buildpack is stored within `master`.
-
-                We recommend using Plotly's customized buildpack for R deployments:
-
-                ```
-                https://github.com/plotly/heroku-buildpack-r#heroku-18
-                ```
-
-                Dash Enterprise app deployment will fail if `buildpacks` package is not included in the project folder
-
                 Dash App Templates including `heroku-buildpack-r`:
 
                 - [Multi-Page Dash App with Dash for R](https://dash-playground.plotly.host/Docs/templates/dashr-multi-page-sample-app)
@@ -1971,66 +2194,65 @@ Requirements = html.Div(children=[
 
                 ***
 
-                ### Optional Files
+                ## Optional Files
 
                 ***
-                
-                //MARK: CHECKS R
 
                 #### CHECKS
 
-                `CHECKS` is an optional text file that allows you to modify the `WAIT`, `TIMEOUT` and 
-                `ATTEMPS` values of Dash Enterprise app health diagnostics.
+                `CHECKS` is an optional text file that allows you to precisely modify Dash 
+                Enterprise's app health diagnostic checks. 
 
-                In the example `CHECKS` file below, Dash Enterprise will wait 15 seconds before performing 
-                the check, allow up to 10 seconds for a response from the app and perform the 
-                check 3 times before marking it as a failure.
+                > `CHECKS` is only available on Dash Enterprise Single Server. Similar functionality 
+                > for Dash Enterprise Kubernetes is available via the `app.json` file. See 
+                > [Dash Enterprise Kubernetes](/Docs/kubernetes) page for more details. 
+                                
+                By default, Dash Enterprise will wait 10 seconds after starting each container 
+                before assuming it is up and proceeding with the deployment. Once this happens for 
+                all of the containers associated with the deployed Dash app, web traffic will then 
+                be directed to the new containers. Dash Enterprise will then wait an additional 60 
+                seconds to give time for old containers with longer running connections 
+                a chance to terminate. The checks are compared to the detected `web` process in your 
+                `Procfile`.
+
+                We recommend that you include a `CHECKS` file if your app's root directory if your 
+                Dash app needs more time to boot or load data into memory so as to verify if it 
+                can serve traffic. 
+                
+                There are three values you can modify in your `CHECKS` file:
+
+                1. `WAIT` corresponds to the allocated time before the checks are performed
+                2. `TIMEOUT` corresponds to the time allowed for checks to be carried out
+                3. `ATTEMPS`, corresponds to the number of allowed check attemps
 
                 ```
                 WAIT=15
                 TIMEOUT=10
                 ATTEMPTS=3
 
-                /app-name/_dash_layout sample text which is inside the layout`
+                /app-name/app.R app$run_server()`
                 ```
+
+                In the simple example above, Dash Enterprise will wait 15 seconds before performing 
+                the check, allow up to 10 seconds for a response from the app and perform the 
+                check 3 times before marking it as a failure. It will also verify if 
+                `app$run_server()` is in `/app-name/app.R`.
 
                 A more advanced use case of `CHECKS` might seek to verify that both an app that takes
-                a few minutes and its associated database pass checks.
+                a few minutes to load and its associated database pass checks.
 
-                See our [CHECKS](http://127.0.0.1:8000/dash-enterprise/checks) chapter for more details.
-
-                #### runtime.txt
-
-                `runtime.txt` is an optional text file that specifies your Dash app's R runtime environment.
-                It must be placed in your app's root directory.
-
-                ```
-                R-4.0.3
-                ```
-
-                Dash Enterprise will use the its default R runtime environment if not included.
-
-                ***
-
-                #### DOKKU_SCALE
-
-                `DOKKU_SCALE` is an optional text file used for manual process and container management. It is required when using a `worker` process in your `Procfile`, and must be
-                placed in your app's root directory. While in use, the `ps:scale` command will be disabled.
-
-                ```shell
-                web=1
-                worker-default=1
-                worker-beat=1
-                ```
+                See our [Python CHECKS Section]() for more details.
 
                 ***
 
                 #### APT files
 
-                APT files are used to extend the base image in the build process.
+                APT files can be used to install system-level packages via the `apt` package manager.
                 Supported APT files include the following:
 
                 ```
+                apt-packages
+                dpkg-packages
                 apt-conf
                 apt-env
                 apt-keys
@@ -2038,78 +2260,20 @@ Requirements = html.Div(children=[
                 apt-sources-list
                 apt-repositories
                 apt-debconf
-                apt-packages
-                dpkg-packages
                 ```
-
-                ***
-
-                #### apt-conf
-
-                `apt-conf` is an optional config file for `APT`, as documented [here](https://linux.die.net/man/5/apt.conf). This is moved to the folder /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come before it in lexicographical order.
-
-                ```
-                Acquire::http::Proxy "http://user:password@proxy.example.com:8888/";
-                ```
-
-                ***
-
-                #### apt-env
-
-                `apt-env` is an optional text file that can contain environment variables. Note that this is sourced, and should not contain arbitrary code.
-
-                ```
-                export ACCEPT_EULA=y
-                ```
-
-                ***
-
-                #### apt-keys
-
-                `apt-keys` is an optional text file that can contain a list of urls for apt repository keys. Each one is installed via `curl "$KEY_URL" | apt-key add -`. Redirects are not followed. The `sha256sum` of the key contents will be displayed to allow for key verification.
-
-                ```
-                https://packages.example.com/keys/example.asc
-                ```
-
-                ***
-
-                #### apt-preferences
-
-                A file that contains [APT Preferences](https://wiki.debian.org/AptConfiguration?action=show&redirect=AptPreferences). This file is not validated for correctness, and is installed to `/etc/apt/preferences.d/90customizations`.
-
-                ```json
-                APT {
-                Install-Recommends "false";
-                }
-                ```
-
-                ***
-
-                #### apt-sources-list
-
-                `apt-sources-list` is an optional text file that overrides the /etc/apt/sources.list file. An empty file may be provided in order to remove upstream packages.
-
-                ```
-                deb http://archive.ubuntu.com/ubuntu/ bionic main universe
-                deb http://archive.ubuntu.com/ubuntu/ bionic-security main universe
-                deb http://archive.ubuntu.com/ubuntu/ bionic-updates main universe
-                deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main
-                ```
-
-                Dash App Templates including `apt-source-list`:
-
-                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
 
                 ***
 
                 #### apt-packages
 
-                `apt-packages` is an optional text file required when apt packages need to be installed on a per app basis. For example, data base drivers.
+                `apt-packages` is an optional text file required when apt packages need to be 
+                installed on a per app basis. For example, data base drivers.
 
-                This file should contain APT packages to install. It accepts multiple packages per line, and multiple lines.
+                This file should contain APT packages to install. It accepts multiple packages per 
+                line, and multiple lines.
 
-                If this file is included, an `apt-get update` is triggered beforehand durning app deployment.
+                If this file is included, an `apt-get update` is triggered beforehand durning app 
+                deployment.
 
                 ```shell
                 nginx
@@ -2125,12 +2289,100 @@ Requirements = html.Div(children=[
                 - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
 
                 ***
+                
+                #### dpkg-packages
+
+                `dpkg-packages` is an optional directory holding .deb packages to be installed 
+                automatically after apt-packages, apt-repositories and apt-debconf. Allows the 
+                installation of custom packages inside the container.
+
+                Packages are installed in lexicographical order. As such, if any packages depend 
+                upon one another, that dependency tree should be figured out beforehand.
+
+                ```shell
+                $ ls dpkg-packages/
+                your-package-0_0.0.1.deb
+                ```
+
+                ***
+                #### apt-conf
+
+                `apt-conf` is an optional config file for `APT`. This is moved to the folder 
+                /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come 
+                before it in lexicographical order. See 
+                [apt.conf Linux man page](https://linux.die.net/man/5/apt.conf) entrycfor more 
+                details.
+
+                ```
+                Acquire::http::Proxy "http://user:password@proxy.example.com:8888/";
+                ```
+
+                ***
+
+                #### apt-env
+
+                `apt-env` is an optional text file that can contain environment variables. Note 
+                that this is sourced, and should not contain arbitrary code.
+
+                ```
+                export ACCEPT_EULA=y
+                ```
+
+                ***
+
+                #### apt-keys
+
+                `apt-keys` is an optional text file that can contain a list of urls for apt 
+                repository keys. Each one is installed via `curl "$KEY_URL" | apt-key add -`. 
+                Redirects are not followed. The `sha256sum` of the key contents will be displayed 
+                to allow for key verification.
+
+                ```
+                https://packages.example.com/keys/example.asc
+                ```
+
+                ***
+
+                #### apt-preferences
+
+                A file that contains [APT Preferences](https://wiki.debian.org/AptConfiguration?action=show&redirect=AptPreferences). 
+                This file is not validated for correctness, and is installed 
+                to `/etc/apt/preferences.d/90customizations`.
+
+                ```json
+                APT {
+                Install-Recommends "false";
+                }
+                ```
+
+                ***
+
+                #### apt-sources-list
+
+                `apt-sources-list` is an optional text file that overrides the /etc/apt/sources.list
+                file. An empty file may be provided in order to remove upstream packages.
+
+                ```
+                deb http://archive.ubuntu.com/ubuntu/ bionic main universe
+                deb http://archive.ubuntu.com/ubuntu/ bionic-security main universe
+                deb http://archive.ubuntu.com/ubuntu/ bionic-updates main universe
+                deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main
+                ```
+
+                Dash App Templates including `apt-source-list`:
+
+                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
+
+                ***
 
                 #### apt-repositories
 
-                `apt-repositories` is an optional text file that should contain additional APT repositories to configure to find packages.
+                `apt-repositories` is an optional text file that should contain additional APT 
+                repositories to configure to find packages.
 
-                If this file is included, an apt-get update is triggered, and the packages `software-properties-common` and `apt-transport-https` are installed. Both these actions happen before any repositories are added.
+                If this file is included, an apt-get update is triggered, and the packages 
+                `software-properties-common` and `apt-transport-https` are installed. 
+                Both these actions happen before any repositories are added.
 
                 Requires an empty line at end of file.
 
@@ -2144,7 +2396,9 @@ Requirements = html.Div(children=[
 
                 #### apt-debconf
 
-                `apt-debconf`is an optional text file allowing to configure package installation. Use case is mainly for EULA (like ttf-mscorefonts-installer). Requires an empty line at end of file.
+                `apt-debconf`is an optional text file allowing to configure package installation. 
+                Use case is mainly for EULA (like ttf-mscorefonts-installer). Requires an empty 
+                line at end of file.
 
                 ```shell
                 ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true
@@ -2152,18 +2406,6 @@ Requirements = html.Div(children=[
 
                 ***
 
-                #### dpkg-packages
-
-                `dpkg-packages` is an optional directory holding .deb packages to be installed automatically after apt-packages, apt-repositories and apt-debconf. Allows the installation of custom packages inside the container.
-
-                Packages are installed in lexicographical order. As such, if any packages depend upon one another, that dependency tree should be figured out beforehand.
-
-                ```shell
-                $ ls dpkg-packages/
-                your-package-0_0.0.1.deb
-
-
-                ***
                 '''
                 ),
             ])
@@ -4662,6 +4904,7 @@ Troubleshooting = html.Div(children=[
         remote: unknown shorthand flag: 'e' in -e
         remote: See 'docker image build --help'
         ```
+<<<<<<< HEAD
 
 
         This error can happen if your project contains a `Dockerfile`.
@@ -4698,6 +4941,10 @@ Troubleshooting = html.Div(children=[
         ```
 
 
+=======
+        
+        
+>>>>>>> pr update2
         This error can happen if your project contains a `Dockerfile`.
         Dash Enterprise does not support projects that contain a `Dockerfile`.
         To resolve, remove the `Dockerfile` from your project and redeploy.
@@ -5100,7 +5347,8 @@ Troubleshooting = html.Div(children=[
         To resolve, make sure that the directives (e.g. `web`, `worker`) in the `Procfile` & `DOKKU_SCALE`
         match.
 
-        See <dccLink href="/dash-enterprise/application-structure" children="application structure"/> for more details on `Procfile` & `DOKKU_SCALE`.
+        See <dccLink href="/dash-enterprise/application-structure" children="application structure"/> 
+        for more details on `Procfile` & `DOKKU_SCALE`.
 
         '''
     ),
@@ -5133,6 +5381,78 @@ Troubleshooting = html.Div(children=[
         ensure that your environment will match since it has the same build
         process (it will build the packages listed in `requirements.txt`),
         the same network, and the same operating system.
+        '''
+    ),
+
+    dcc.Markdown(
+        '''
+        ## gunicorn: error: unrecognized arguments
+
+        ```sh
+        $ git push plotly master
+        [...]
+        remote: App container failed to start!!
+        =====> <your-dash-app> web container output:
+               usage: gunicorn [OPTIONS] [APP_MODULE]
+               gunicorn: error: unrecognized arguments: --timout 2
+        [...]
+         ! [remote rejected] master -> master (pre-receive hook declined)
+        error: failed to push some refs to 'dokku@<your-dash-enterprise-host>:<your-dash-app>'
+        ```
+
+
+        This can happen when you add an invalid `gunicorn` argument to the `web`process in your `Procfile`.
+
+        To resolve, verify the format and spelling of those arguments. See [Gunicorn Docs on Settings](https://docs.gunicorn.org/en/stable/settings.html) for more details.
+        
+        '''
+    ),
+
+        dcc.Markdown( 
+        '''
+        ## \[CRITICAL\] WORKER TIMEOUT 
+        
+        ```sh
+        [...]
+        2020-12-01T07:45:15.008398034Z app[web.1]: [2020-12-01 07:45:15 +0000] [15] [CRITICAL] WORKER TIMEOUT (pid:1040)
+        [...]
+
+        ```
+    
+        This can happen when your app's `gunicorn` `web` process does not have enough time to 
+        complete its task during the booting process. By default, `gunicorn` has a 30 second timeout.
+
+        To resolve, you can either increase the amount of time your app's `web` process has to 
+        complete its task or speed the task up by preloading data. These results can be acheived by 
+        editing your `Procfile` and adding one of following `gunicorn` flags to that process:
+
+        1. `--timeout` allows you to modify the default amount of time available for your workers to 
+           complete  a task.
+        
+
+           See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) 
+           for details.
+
+
+           ```
+           web: gunicorn app:server --workers 4 --timeout 90
+
+           ```
+                
+        2. Use the `--preload` flag to reduce your application's memory and speed up boot time. 
+           Avoid the `--preload` flag if you are using shared database connection pools and
+           see [Database Connections](/dash-enterprise/database-connections).
+        
+        
+           See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) 
+           for more details.
+
+
+           ```
+           web: gunicorn app:server --workers 4 --preload
+
+           ```
+
         '''
     )
 
