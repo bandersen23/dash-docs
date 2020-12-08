@@ -748,7 +748,8 @@ Requirements = html.Div(children=[
                 drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file
                 if you want to customize pre-release health checks.
 
-                A more complex project structure might look like this:
+                A more complex project structure might look like what you see below:
+
                 ```
                 |-- app.py
                 |-- CHECKS
@@ -767,9 +768,9 @@ Requirements = html.Div(children=[
 
                 2. Detect which Buildpack to use based off of files present in app root folder. 
                 This Python & `pip` buildpack is detected by discovering the `requirements.txt` 
-                file.
+                file. Dash Enterprise buildpacks get updated with every Dash Enterprise release.
                 3. Install Python 3.6.10 — override the version with a `runtime.txt` file. 
-                   For Dash Enterprise in Airgapped (offline) mode, only Python-<version> is supported.
+                   For Dash Enterprise in Airgapped (offline) mode, only Python-3.6.5 is supported.
                 4. Install custom APT packages if an `apt-packages` file is provided (optional)
                 5. Install Python app dependencies specified in `requirement.txt` file
                 6. Run a build script if an `app.json` file is included with a `"predeploy"` 
@@ -1048,8 +1049,8 @@ Requirements = html.Div(children=[
                 will not be scaled automatically. Instead, they would need to be scaled in the App 
                 Manager's "Resources" page.
 
-                Dash App Templates including `Procfile`:
-
+                Dash App Templates including `Procfile`: 
+                
                 1. [A simple Procfile with `web`](/Docs/templates/sample-app)
                 2. [A Procfile that loads prepares data before running gunicorn](/Docs/templates/vaex-sample)
                 3. [A Procfile that runs a background job queue](/Docs/templates/snapshots-single-page)
@@ -1117,7 +1118,9 @@ Requirements = html.Div(children=[
 
                 1. `WAIT` corresponds to the allocated time before the checks are performed
                 2. `TIMEOUT` corresponds to the time allowed for checks to be carried out
-                3. `ATTEMPTS`, corresponds to the number of allowed check attemps
+                3. `ATTEMPTS`, corresponds to the number of allowed check attempts
+
+                The default `CHECKS` file values used by Dash Enterprise are the following:
 
                 ```
                 WAIT=15
@@ -1129,72 +1132,103 @@ Requirements = html.Div(children=[
                 the check and will allow up to 10 seconds for a response from the app, and attempt the 
                 check 3 times before marking it as a failure. 
 
+                Note that omitting `CHECKS` file instructions will result in Dash Enterprise skipping
+                those checks. 
+
+                ```
+                WAIT=15
+                # TIMEOUT=10
+                ATTEMPTS=3
+                ```
+
                 You may also include instructions that are specified in the format of a relative 
                 link, followed by content that Dash Enterprise should find in the response. 
                 The expected content can be omitted if text content is not relevant. 
                 (e.g if you want to check whether an image can be served). The example below checks 
-                that `dash-logo.png` is being served by the app.
+                that `dash-logo.png` is being served to the app.
+
 
                 ```
-                /dash-demo/assets/images/dash-logo.png
+                WAIT=15
+                TIMEOUT=10
+                ATTEMPTS=3
+
+                /<your-dash-app>/assets/images/dash-logo.png
                 ```
 
-                A more advanced use case of `CHECKS` might seek to verify that both an app that takes
-                a few minutes to load, and its associated database pass checks.  
-
-                You can create your own health check by writing a custom flask endpoint that will return
-                a value of your choosing. In the example below, we include the `@app.server.route('/status')` that returns `OK`:
+                Another use case for `CHECKS` might be to verify that an app that takes
+                a few minutes to load pass checks.  
 
                 ```python
                 import dash
-                from dash.dependencies import Input, Output
                 import dash_design_kit as ddk
                 import dash_core_components as dcc
                 import dash_html_components as html
                 import time
-                import datetime
-                current_time = datetime.datetime.now()
 
-                # simulate an app that takes a long time start
-                time.sleep(180)
+                # simulate long loading time
+                time.sleep(120)
 
                 app = dash.Dash(__name__)
                 server = app.server
                 app.layout = ddk.App([
-                    html.Div('hello world'),
-                    dcc.Input(id='input'),
-                    html.Div(id='output'),
-                    html.H1('Deploy at {}'.format(current_time))
+                    html.H1('hello world')
                 ])
-                @app.callback(
-                    Output('output', 'children'),
-                    Input('input', 'value')
-                )
-                def update_output(value):
-                    return value
-                # Custom status file for the deployment CHECKS
-                @app.server.route('/status')
-                def update_status():
-                    time.sleep(30)
-                    return 'OK'
+
                 if __name__ == '__main__':
                     app.run_server(debug=False)
                 ```
 
-                In this example, we are simulating an app with a long loading time with
-                `time.sleep(180)`. We have also included a custom status file to simulate a long 
-                server connection. Deploying this example without a `CHECKS` file will result in 
-                Dash Enterprise's default health checks to be run. That is a `WAIT=15`, `TIMEOUT=10` and `ATTEMPTS=3`. 
-                This will result in Dash Enterprise serving an app that has not loaded and with a 
-                server connection that has not been establish, and will display an error.
+                In this example, we are simulating an app with a two-minute loading time with
+                `time.sleep(120)`. Deploying this example without a `CHECKS` file will result in 
+                Dash Enterprise running an app health check with its default values.
+                Dash Enterprise will then be serving an app that has not yet loaded and prompting a 
+                `[CRITICAL] WORKER TIMEOUT` error.
 
                 The inclusion of the following `CHECKS` file resolves this issue by delaying web 
-                traffic long enough for the app to fully load and server connection established:
+                traffic long enough for the app to fully load:
 
                 ```
-                WAIT=185
-                TIMEOUT=35
+                WAIT=15
+                TIMEOUT=130
                 ATTEMPTS=2
+                ```
+
+                You can also create your own health check by writing a custom Flask endpoint that will return
+                a value of your choosing. In the following example, we include  `@app.server.route('/status')` 
+                that returns `OK'.
+
+                ```python
+                import dash
+                import dash_design_kit as ddk
+                import dash_core_components as dcc
+                import dash_html_components as html
+
+
+                app = dash.Dash(__name__)
+                server = app.server
+                app.layout = ddk.App([
+                    html.H1('hello world'),
+                ])
+
+                # Custom status file for the deployment CHECKS
+                @app.server.route('/status')
+                def update_status():
+                    return 'OK'
+                if __name__ == '__main__':
+                    app.run_server(debug=False)
+
+                ```
+
+                The example app's `CHECKSFILE` will then resemble:
+
+                ```
+                WAIT=15
+                TIMEOUT=130
+                ATTEMPTS=2
+
+                <your-dash-app>/status OK
+
                 ```
 
                 #### .gitignore
@@ -1212,16 +1246,61 @@ Requirements = html.Div(children=[
                 #### runtime.txt
 
                 `runtime.txt` is an optional text file that specifies your Dash app's Python runtime 
-                environment. It must be placed in your app's root directory. 
-                Note that the python runtime used by deployed apps on Dash Enterprise is different from the runtime available on Workspaces.
-                Dash Enterprise 4.0.1 uses `python-3.6.10` by default. Workspaces uses `python-3.7.4` and cannot be configured with changes to `runtime.txt`. 
-                Dash Enterprise in airgapped (offline) mode is only compatible with `python-3.6.5`.
-
+                environment. It must be placed in your app's root directory. The contents are case 
+                sensitive and must contain include major and minor release, and patch numbers. 
+                
                 ```
                 python-3.7.4
 
                 ```
+                
+                Note that the python runtime used by deployed apps on Dash Enterprise is different from the runtime available on Workspaces.
+                Dash Enterprise 4.0.1 uses `python-3.6.10` by default. Workspaces uses `python-3.7.4` and cannot be configured with changes to `runtime.txt`. 
+                Dash Enterprise in Airgapped (offline) mode is only compatible with `python-3.6.5`.
 
+                As of 4.0.1, the following Python versions are supported below. The available Python 
+                runtimes get updated whenever a version of Dash Enterprise 
+                is released.
+
+                ```
+                python-2.7.10 (deprecated)
+                python-2.7.11 (deprecated)
+                python-2.7.12 (deprecated)
+                python-2.7.13 (deprecated)
+                python-2.7.14 (deprecated)
+                python-2.7.15 (deprecated)
+                python-2.7.16 (deprecated)
+                python-2.7.9 (deprecated)
+                python-3.6.0
+                python-3.6.1
+                python-3.6.10
+                python-3.6.2
+                python-3.6.3
+                python-3.6.4
+                python-3.6.5
+                python-3.6.6
+                python-3.6.7
+                python-3.6.8
+                python-3.6.9
+                python-3.7.0
+                python-3.7.1
+                python-3.7.2
+                python-3.7.3
+                python-3.7.4
+                python-3.7.5
+                python-3.7.6
+                python-3.8.0
+                python-3.8.1
+                python-3.8.2
+
+                ```
+                
+                Dash Enterprise will automatically update the Python version to 
+                get the latest security releases if a `runtime.txt` file is omitted.
+
+                Note that Python 2 will soon be deprecated. Dash Enterprise will no longer support 
+                Python 2 as of January 1, 2021. 
+                
                 ***
 
                 #### app.json 
@@ -1234,56 +1313,56 @@ Requirements = html.Div(children=[
                 `post-deploy`: This script is run in each container.
 
 
-                ``` //TODO: app.json pre/post example
-                {
-                    "scripts": {
-                        "postdeploy": "bundle exec rake bootstrap",
-                        "predeploy": "bundle exec rake cleanup",
-                    }
-                }
+                ```
+                {{
+                    "scripts": {{
+                        "predeploy": "touch /app/predeploy.test",
+                        "postdeploy": "curl https://some.external.api.service.com/deployment?state=success"
+                    }}
+                }}
                 ```
 
                 Note that on Dash Enterprise Kubernetes, `readiness` and `liveliness` fields are supported.
-                They are used for Dash app health checks similary to the `CHECKS` files used
-                on Dash Enteprise Single Servers. 
+                They are used for Dash app health checks similar to the `CHECKS` files used
+                on Dash Enterprise Single Servers. 
 
                 `readiness` will determine when the most recently deployed version of a Dash app is able 
                 receive web traffic. `liveliness` determines when an app becomes available.
 
-                This `app.json` file may ressemble:
+                This `app.json` file may resemble:
 
                 ```
-                {
-                    "healthchecks": {
-                        "web": {
-                            "readiness": {
-                                "httpGet": {
-                                    "path": "/{{ $APP }}/_dash-layout",
+                {{
+                    "healthchecks": {{
+                        "web": {{
+                            "readiness": {{
+                                "httpGet": {{
+                                    "path": "/{{{{ $APP }}}}/_dash-layout",
                                     "port": 5000
-                                },
+                                }},
                                 "initialDelaySeconds": 10,
                                 "periodSeconds": 15,
                                 "timeoutSeconds": 15,
                                 "successThreshold": 1,
                                 "failureThreshold": 4
-                            },
-                            "liveness": {
-                                "httpGet": {
-                                    "path": "/{{ $APP }}/_dash-layout",
+                            }},
+                            "liveness": {{
+                                "httpGet": {{
+                                    "path": "/{{{{ $APP }}}}/_dash-layout",
                                     "port": 5000
-                                },
+                                }},
                                 "initialDelaySeconds": 77,
                                 "periodSeconds": 120,
                                 "timeoutSeconds": 15,
                                 "successThreshold": 1,
                                 "failureThreshold": 10
-                            }
-                        }
-                    }
-                }
-
-                See [Kubernetes Chapter](/docs/kubernetes) chapter for more details. 
+                            }}
+                        }}
+                    }}
+                }}
                 ```
+                
+                See [Kubernetes Chapter](/docs/kubernetes) chapter for more details.
 
                 #### DOKKU_SCALE
 
@@ -1447,9 +1526,9 @@ Requirements = html.Div(children=[
                 `/etc/apt/preferences.d/90customizations`.
 
                 ```json
-                APT {
+                APT {{
                 Install-Recommends "false";
-                }
+                }}
                 ```
 
                 ***
@@ -1504,10 +1583,12 @@ Requirements = html.Div(children=[
 
                 ***
                 
-                '''
-                ),
+                '''.format(workspace_url=('/Docs/workspaces' if 'DASH_DOCS_URL_PREFIX' in os.environ else 'https://plotly.com/dash/ai-and-ml-templates'), 
+                sample_app_url=('/Docs/templates/some-sample-app'  if 'DASH_DOCS_URL_PREFIX' in os.environ else 'https://plotly.com/dash/workspaces')        
+                ))
             ])
-        ]),                
+        ]),
+           
         dcc.Tab(label='Python (Conda)', children=[
             html.Div([
                 rc.Markdown(
@@ -1529,7 +1610,7 @@ Requirements = html.Div(children=[
 
                 ## Application Structure
 
-                The Conda buildpack is similar to the Python buildpack except it include `miniconda` 
+                The Conda buildpack is similar to the Python buildpack except that it includes `Miniconda` 
                 and allows you to install packages with the `conda-requirements.txt` file.
                 
                 To deploy an app with Dash Enterprise and Conda, three additional files are needed:
@@ -1574,7 +1655,7 @@ Requirements = html.Div(children=[
                 files are found
                 3. Detect  `conda-runtime.txt`, which specifies the version of `conda` in the form 
                    of `Miniconda<2-or-3>-<conda-version >= 3.18.3>`, e.g. `Miniconda3-4.5.12` to install.
-                   Note that with Dash Enteprise in Airgapped (offline) mode, the only `Miniconda3-4.5.12` and `Miniconda2-4.5.12` are supported.
+                   Note that with Dash Enterprise in Airgapped (offline) mode, the only `Miniconda3-4.5.12` and `Miniconda2-4.5.12` are supported.
                 4. Install version of  `conda` specified in `conda-runtime.txt` 
                 5. Install custom APT or DKPG packages if an `apt-packages` or `dkpg-package` file is provided (optional)
                 6. Install Python app dependencies specified in `conda-requirement.txt` file with `miniconda`
@@ -1641,14 +1722,16 @@ Requirements = html.Div(children=[
                 - [An app that uses index.py](https://dash-playground.plotly.host/Docs/templates/snapshots-scheduled-reports)
                 - [An app that uses index.py](https://dash-playground.plotly.host/Docs/templates/snapshots-notes-persistence)
                 
+                
                 Dash Enterprise app deployment will fail if `app.py` is not included in the project folder, or if
                 `app.py` does not contain `server = app.server`.
 
                 See [Common Deployment Errors](/dash-enterprise/troubleshooting) chapter for more details.
 
+
                 ***
 
-                #### conda-runtime.txt / DONE: conda conda-runtime vs python runtime
+                #### conda-runtime.txt
 
                 `conda-runtime.txt` is a required text files that specifies Conda's runtime. It must be placed in
                 your app's root directory. it should contain the version of conda to install, in the 
@@ -1661,17 +1744,17 @@ Requirements = html.Div(children=[
 
                 The supported runtimes are the ones in this [list](https://repo.anaconda.com/miniconda/) and >= 3.18.3.
 
-                If this buildpack is used for a deployment to Plotly's Dash Enterprise Server in airgapped (offline) mode, 
-                the only conda runtimes currently supported are Miniconda3-4.5.12 and Miniconda2-4.5.12 (depricated)
+                If this buildpack is used for a deployment to a Dash Enterprise Server in Airgapped (offline) mode, 
+                the only conda runtimes currently supported are Miniconda3-4.5.12 and Miniconda2-4.5.12 (deprecated)
 
                 Note that Python 2 will soon be deprecated. Dash Enterprise will no longer support 
                 Miniconda2 and Python 2 as of January 1, 2021. 
 
                 Dash App Templates including `conda-runtime.txt`:
 
-                - [Sample RAPIDS Application](https://dash-playground.plotly.host/Docs/templates/rapids-sample)
-                - [Managing Dependencies with Conda](https://dash-playground.plotly.host/Docs/templates/conda)
-                - [Managing Dependencies with Conda-Airgapped](https://dash-playground.plotly.host/Docs/templates/conda-airgapped)
+                - [Sample RAPIDS Application](/Docs/templates/rapids-sample)
+                - [Managing Dependencies with Conda](/Docs/templates/conda)
+                - [Managing Dependencies with Conda-Airgapped](/Docs/templates/conda-airgapped)
 
                 ***
                 
@@ -1682,7 +1765,7 @@ Requirements = html.Div(children=[
 
                 See [Conda Channels Docs](https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/channels.html) for more details.
 
-                It will ressemble something like this:
+                It will resemble something like this:
 
                 ```
                 channels:
@@ -1785,6 +1868,7 @@ Requirements = html.Div(children=[
                 For packages not available on conda channels — notably all Dash Enterprise packages 
                 — list them in a `requirements.txt` file located in your app's root directory. Those dependencies
                 will be installed with `pip` when the app is deployed.
+
                 The `requirements.txt` file may resemble:
 
                 ```
@@ -1803,9 +1887,9 @@ Requirements = html.Div(children=[
 
                 Dash App Templates including `conda-requirements.txt`:
 
-                - [Sample RAPIDS Application](https://dash-playground.plotly.host/Docs/templates/rapids-sample)
-                - [Managing Dependencies with Conda](https://dash-playground.plotly.host/Docs/templates/conda)
-                - [Managing Dependencies with Conda-Airgapped](https://dash-playground.plotly.host/Docs/templates/conda-airgapped)
+                - [Sample RAPIDS Application](/Docs/templates/rapids-sample)
+                - [Managing Dependencies with Conda](/Docs/templates/conda)
+                - [Managing Dependencies with Conda-Airgapped](/Docs/templates/conda-airgapped)
 
                 ***
 
@@ -1972,6 +2056,7 @@ Requirements = html.Div(children=[
                 ***
 
                 ## Optional Files
+
                 #### CHECKS
 
                 `CHECKS` is an optional text file that allows you to precisely modify Dash 
@@ -1989,7 +2074,7 @@ Requirements = html.Div(children=[
                 a chance to terminate. The checks are compared to the detected `web` process in your 
                 `Procfile`.
 
-                We recommend that you include a `CHECKS` file if your app's root directory if your 
+                We recommend that you include a `CHECKS` file in your app's root directory if your 
                 Dash app needs more time to boot or load data into memory so as to verify if it 
                 can serve traffic. 
                 
@@ -1997,91 +2082,117 @@ Requirements = html.Div(children=[
 
                 1. `WAIT` corresponds to the allocated time before the checks are performed
                 2. `TIMEOUT` corresponds to the time allowed for checks to be carried out
-                3. `ATTEMPS`, corresponds to the number of allowed check attemps
+                3. `ATTEMPTS`, corresponds to the number of allowed check attempts
+
+                The default `CHECKS` file values used by Dash Enterprise are the following:
+
+                ```
+                WAIT=15
+                TIMEOUT=10
+                ATTEMPTS=3
+                ```
+
+                In the simple example above, Dash Enterprise will wait 15 seconds before performing 
+                the check and will allow up to 10 seconds for a response from the app, and attempt the 
+                check 3 times before marking it as a failure. 
+
+                Note that omitting `CHECKS` file instructions will result in Dash Enterprise skipping
+                those checks. 
+
+                ```
+                WAIT=15
+                # TIMEOUT=10
+                ATTEMPTS=3
+                ```
+
+                You may also include instructions that are specified in the format of a relative 
+                link, followed by content that Dash Enterprise should find in the response. 
+                The expected content can be omitted if text content is not relevant. 
+                (e.g if you want to check whether an image can be served). The example below checks 
+                that `dash-logo.png` is being served to the app.
+
 
                 ```
                 WAIT=15
                 TIMEOUT=10
                 ATTEMPTS=3
 
-                /app-name/app.py server = app.server`
+                /<your-dash-app>/assets/images/dash-logo.png
                 ```
 
-                In the simple example above, Dash Enterprise will wait 15 seconds before performing 
-                the check, allow up to 10 seconds for a response from the app and perform the 
-                check 3 times before marking it as a failure. 
-
-                You may also include instructions that are specified in the format of a relative 
-                link followed by content that Dash Enterprise should find in the response. 
-                The expected content can be omitted if text content is not relevant. 
-                (e.g if you want to check whether an image can be served). The example below checks 
-                `app.py` for `server = app.server`, that `_dash-undo-redo` is included in the 
-                `dash.css` file and that `dash-logo.png` is being served by the app.
-
-                ```
-                WAIT=5
-                TIMEOUT=10
-                ATTEMPTS=3
-
-                /app-name/app.py server = app.server
-                /app-name/assets/dash.css _dash-undo-redo
-                /app-name/assets/images/dash-logo.png
-                ```
-
-                A more advanced use case of `CHECKS` might seek to verify that both an app that takes
-                a few minutes to load, and its associated database pass checks. 
+                Another use case for `CHECKS` might be to verify that an app that takes
+                a few minutes to load pass checks.  
 
                 ```python
                 import dash
-                from dash.dependencies import Input, Output
                 import dash_design_kit as ddk
                 import dash_core_components as dcc
                 import dash_html_components as html
                 import time
-                import datetime
-                current_time = datetime.datetime.now()
 
-                # simulate an app that takes a long time start
-                time.sleep(180)
+                # simulate long loading time
+                time.sleep(120)
 
                 app = dash.Dash(__name__)
                 server = app.server
                 app.layout = ddk.App([
-                    html.Div('hello world'),
-                    dcc.Input(id='input'),
-                    html.Div(id='output'),
-                    html.H1('Deploy at {}'.format(current_time))
+                    html.H1('hello world')
                 ])
-                @app.callback(
-                    Output('output', 'children'),
-                    Input('input', 'value')
-                )
-                def update_output(value):
-                    return value
-                # Custom status file for the deployment CHECKS
-                @app.server.route('/status')
-                def update_status():
-                    time.sleep(30)
-                    # raise Exception()
-                    return 'OK'
+
                 if __name__ == '__main__':
                     app.run_server(debug=False)
                 ```
 
-                In this example, we are simulating an app with a long loading time with
-                `time.sleep(180)`. We have also included a custom status file to simulate a long 
-                server connection. Deploying this example without a `CHECKS` file will result in 
-                Dash Enterprise's default checks to be run. That is a `WAIT=15`, `TIMEOUT=10` and `ATTEMPTS=3`. 
-                This will result in Dash Enterprise serving an app that has not loaded and with a 
-                server connection that has not been establish, and will display an error.
+                In this example, we are simulating an app with a two-minute loading time with
+                `time.sleep(120)`. Deploying this example without a `CHECKS` file will result in 
+                Dash Enterprise running an app health check with its default values.
+                Dash Enterprise will then be serving an app that has not yet loaded and prompting a 
+                `[CRITICAL] WORKER TIMEOUT` error.
 
                 The inclusion of the following `CHECKS` file resolves this issue by delaying web 
-                traffic long enough for the app to fully load and server connection established:
+                traffic long enough for the app to fully load:
 
                 ```
-                WAIT=185
-                TIMEOUT=35
+                WAIT=15
+                TIMEOUT=130
                 ATTEMPTS=2
+                ```
+
+                You can also create your own health check by writing a custom Flask endpoint that will return
+                a value of your choosing. In the following example, we include  `@app.server.route('/status')` 
+                that returns `OK'.
+
+                ```python
+                import dash
+                import dash_design_kit as ddk
+                import dash_core_components as dcc
+                import dash_html_components as html
+
+
+                app = dash.Dash(__name__)
+                server = app.server
+                app.layout = ddk.App([
+                    html.H1('hello world'),
+                ])
+
+                # Custom status file for the deployment CHECKS
+                @app.server.route('/status')
+                def update_status():
+                    return 'OK'
+                if __name__ == '__main__':
+                    app.run_server(debug=False)
+
+                ```
+
+                The example app's `CHECKSFILE` will then resemble:
+
+                ```
+                WAIT=15
+                TIMEOUT=130
+                ATTEMPTS=2
+
+                <your-dash-app>/status OK
+
                 ```
 
                 ***
@@ -2138,7 +2249,6 @@ Requirements = html.Div(children=[
                 - [Snapshots-Enabled Clinical Trial App & Report](https://dash-playground.plotly.host/Docs/templates/snapshots-clinical-trial-dashboard)
                 - [Dash Embedded with Snapshots Engine](https://dash-playground.plotly.host/Docs/templates/dash-embedded-snapshots-example)
                 - [Background Task Queue and Viewing Previous Results](https://dash-playground.plotly.host/Docs/templates/snapshots-results-on-same-page-with-archive)
-
                 ***
                 
                 #### APT files
@@ -2186,7 +2296,6 @@ Requirements = html.Div(children=[
                 - [pyodbc Sample App](https://dash-playground.plotly.host/Docs/templates/pyodbc-sample-app)
                 - [MS SQL Server Sample App](https://dash-playground.plotly.host/Docs/templates/mssql-pyodbc-sample-app)
                 - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
-
                 ***
                 
                 #### dpkg-packages
@@ -2248,9 +2357,9 @@ Requirements = html.Div(children=[
                 `/etc/apt/preferences.d/90customizations`.
 
                 ```json
-                APT {
+                APT {{
                 Install-Recommends "false";
-                }
+                }}
                 ```
 
                 ***
@@ -2270,7 +2379,7 @@ Requirements = html.Div(children=[
 
                 Dash App Templates including `apt-source-list`:
 
-                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
+                - [Internal Repository Manager](/Docs/templates/airgapped-repo)
 
                 ***
 
@@ -2305,8 +2414,9 @@ Requirements = html.Div(children=[
 
                 ***
 
-                '''
-                ),
+                '''.format(workspace_url=('/Docs/workspaces' if 'DASH_DOCS_URL_PREFIX' in os.environ else 'https://plotly.com/dash/ai-and-ml-templates'), 
+                sample_app_url=('/Docs/templates/some-sample-app'  if 'DASH_DOCS_URL_PREFIX' in os.environ else 'https://plotly.com/dash/workspaces')        
+                ))
             ])
         ]),
 # 
@@ -2315,10 +2425,7 @@ Requirements = html.Div(children=[
         dcc.Tab(label='R', children=[
             html.Div([
                 rc.Markdown(
-                '''
-
-                // MARK: r 
-                
+                '''                
 
                 The Deployment & Release lifecycle begins when you `git push` to Dash Enterprise —
                 Dash Enterprise creates a new Docker image based off of the changes that you pushed
@@ -2382,7 +2489,7 @@ Requirements = html.Div(children=[
                 1. Create a new Docker container from builder image
                 2. Mount app source code
                 3. Detect which Buildpack to use based off of files present in app root folder
-                4. Install R runtime environment — override with a `runtime.txt` file
+                4. Install Conda runtime environment — override with a `runtime.txt` file
                 5. Install APT packages: provided with `apt-packages` file
                 6. Install R and app's R dependencies with `init.R` files
                 7.  Run pre-deployment script specified in `app.json`
@@ -2407,8 +2514,8 @@ Requirements = html.Div(children=[
 
                 Dash App Templates including `app.R`:
 
-                - [Multi-Page Dash App with Dash for R](https://dash-playground.plotly.host/Docs/templates/dashr-multi-page-sample-app)
-                - [Sample App (R)](https://dash-playground.plotly.host/Docs/templates/dash-for-r)
+                - [Multi-Page Dash App with Dash for R](/Docs/templates/dashr-multi-page-sample-app)
+                - [Sample App (R)](/Docs/templates/dash-for-r)
 
                 Dash Enterprise app deployment will fail if `app.R` is not included in the project folder, or if
                 `app.R` does not contain `app$run_server()`.
@@ -2449,98 +2556,10 @@ Requirements = html.Div(children=[
                 > `CHECKS` is only available on Dash Enterprise Single Server. Similar functionality 
                 > for Dash Enterprise Kubernetes is available via the `app.json` file. See 
                 > [Dash Enterprise Kubernetes](/Docs/kubernetes) page for more details. 
-                                
-                By default, Dash Enterprise will wait 10 seconds after starting each container 
-                before assuming it is up and proceeding with the deployment. Once this happens for 
-                all of the containers associated with the deployed Dash app, web traffic will then 
-                be directed to the new containers. Dash Enterprise will then wait an additional 60 
-                seconds to give time for old containers with longer running connections 
-                a chance to terminate. The checks are compared to the detected `web` process in your 
-                `Procfile`.
 
-                We recommend that you include a `CHECKS` file if your app's root directory if your 
-                Dash app needs more time to boot or load data into memory so as to verify if it 
-                can serve traffic. 
-                
-                There are three settings you can modify in your `CHECKS` file:
-
-                1. `WAIT` corresponds to the allocated time before the checks are performed
-                2. `TIMEOUT` corresponds to the time allowed for checks to be carried out
-                3. `ATTEMPS`, corresponds to the number of allowed check attemps
-
-                ```
-                WAIT=15
-                TIMEOUT=10
-                ATTEMPTS=3
-
-                /app-name/app.R app$run_server()`
-                ```
-
-                In the simple example above, Dash Enterprise will wait 15 seconds before performing 
-                the check, allow up to 10 seconds for a response from the app and perform the 
-                check 3 times before marking it as a failure. 
-
-                You may also include instructions that are specified in the format of a relative 
-                link followed by content that Dash Enterprise should find in the response. 
-                The expected content can be omitted if text content is not relevant. 
-                (e.g if you want to check whether an image can be served). The example below checks 
-                `app.R` for `app$run_server()`, that `_dash-undo-redo` is included in the 
-                `dash.css` file and that `dash-logo.png` is being served by the app.
-
-                ```
-                WAIT=5
-                TIMEOUT=10
-                ATTEMPTS=3
-
-                /app-name/app.R app$run_server()
-                /app-name/assets/dash.css _dash-undo-redo
-                /app-name/assets/images/dash-logo.png
-                ```
-
-                A more advanced use case of `CHECKS` might seek to verify that both an app that takes
-                a few minutes to load and its associated database pass checks.
-
-                See our [Python CHECKS Section]() for more details.
+                See Python `CHECKS` Section for more details.
 
                 ***
-
-                #### DOKKU_SCALE //FIXME: r dokku_scale equivalent
-
-                `DOKKU_SCALE` is an optional text file used to specify the number of containers 
-                created for each process type. 
-                Note that a DOKKU_SCALE should must be added to your app's root directory if you use 
-                processes other than web and release in your Procfile.
-
-                Without a DOKKU_SCALE file, the containers corresponding to these other processes 
-                will not be scaled automatically. Instead, they would need to be scaled in your app's
-                "Resources" page in the App Manager.
-
-                By default, Dash Enterprise runs a single web container:
-                web=1
-                If you are running other processes, then we recommend scaling up those
-                containers to 1 as well. For example:
-
-                ```
-                web=1
-                worker-default=1
-                worker-beat=1
-
-                ```
-
-                These containers are stateless so you can scale them up as long as your server
-                or Kubernetes cluster has enough memory and CPU:
-
-                ```
-                web=4
-                worker-default=1
-                worker-beat=1
-
-                ```
-
-                However, we recommend scaling up your Dash app using the gunicorn --worker
-                and --preload flag before scaling up your containers.
-                Scaling with --workers and --preload will be consume less memory than scaling
-                up by containers.
 
                 #### APT files
 
@@ -2569,7 +2588,7 @@ Requirements = html.Div(children=[
                 This file should contain APT packages to install. It accepts multiple packages per 
                 line, and multiple lines.
 
-                If this file is included, an `apt-get update` is triggered beforehand durning app 
+                If this file is included, an `apt-get update` is triggered beforehand during app 
                 deployment.
 
                 In the following example we are installing `vim`, `unixodbc` and `unixodbc-dev`: 
@@ -2587,6 +2606,7 @@ Requirements = html.Div(children=[
                 - [pyodbc Sample App](https://dash-playground.plotly.host/Docs/templates/pyodbc-sample-app)
                 - [MS SQL Server Sample App](https://dash-playground.plotly.host/Docs/templates/mssql-pyodbc-sample-app)
                 - [Databricks-connect dash application](https://dash-playground.plotly.host/Docs/templates/databricks-connect)
+
 
                 ***
                 
@@ -2610,7 +2630,7 @@ Requirements = html.Div(children=[
                 `apt-conf` is an optional config file for `APT`. This is moved to the folder 
                 /etc/apt/apt.conf.d/99dokku-apt, and can override any apt.conf files that come 
                 before it in lexicographical order. See 
-                [apt.conf Linux man page](https://linux.die.net/man/5/apt.conf) entrycfor more 
+                [apt.conf Linux man page](https://linux.die.net/man/5/apt.conf) entry for more 
                 details.
 
                 ```
@@ -2650,9 +2670,9 @@ Requirements = html.Div(children=[
                 to `/etc/apt/preferences.d/90customizations`.
 
                 ```json
-                APT {
+                APT {{
                 Install-Recommends "false";
-                }
+                }}
                 ```
 
                 ***
@@ -2671,7 +2691,7 @@ Requirements = html.Div(children=[
 
                 Dash App Templates including `apt-source-list`:
 
-                - [Internal Repository Manager](https://dash-playground.plotly.host/Docs/templates/airgapped-repo)
+                - [Internal Repository Manager](/Docs/templates/airgapped-repo)
 
                 ***
 
@@ -2706,8 +2726,9 @@ Requirements = html.Div(children=[
 
                 ***
 
-                '''
-                ),
+                '''.format(workspace_url=('/Docs/workspaces' if 'DASH_DOCS_URL_PREFIX' in os.environ else 'https://plotly.com/dash/ai-and-ml-templates'), 
+                sample_app_url=('/Docs/templates/some-sample-app'  if 'DASH_DOCS_URL_PREFIX' in os.environ else 'https://plotly.com/dash/workspaces')        
+                ))
             ])
         ])
     ])
