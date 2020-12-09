@@ -282,7 +282,7 @@ DASH_ENTERPRISE_URLS = {
                 },
                 {
                     'url': '/dash-enterprise/application-structure',
-                    'content': chapters.dash_enterprise.dash_enterprise_chapters.Requirements,
+                    'content': chapters.dash_enterprise.application_structure.index.layout,
                     'name': 'Application Structure',
                     'description': 'Ensure that your app meets all the requirements for deployment.'
                 },
