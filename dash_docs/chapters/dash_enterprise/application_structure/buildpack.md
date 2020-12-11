@@ -1,4 +1,9 @@
+
 ## Buildpack Detection
+
+The Deployment & Release lifecycle begins when you `git push` to Dash Enterprise —
+Dash Enterprise creates a new Docker image based off of the changes that you pushed
+and will run the image as Docker containers when finished.
 
 By including special files in your project folder, you can modify how Dash Enterprise builds,
 deploys and releases your apps.
