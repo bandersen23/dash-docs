@@ -10,7 +10,7 @@ To deploy a Dash R app with Dash Enterprise, three additional files are needed:
 
 A minimal project structure might look like this:
 
-    ```
+```
 |-- app.R
 |-- Procfile
 |-- init.R
@@ -24,8 +24,8 @@ scripts when deploying changes, or a `CHECKS` file if you want to customize
 pre-release health checks. See [Files Reference](#optional-files) section
 below for more details.
 
-
 A more complex project structure might look like this:
+
 ```
 |-- app.R
 |-- CHECKS

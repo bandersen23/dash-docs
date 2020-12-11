@@ -14,3 +14,5 @@ When you run `git push plotly master`, Dash Enterprise will do the following:
 10. Run pre-release app health checks with `CHECKS` file
 11. Release: Open app to web traffic
 12. Run post-deployment script specified in `app.json`
+
+{url}

@@ -8,54 +8,62 @@ content = tools.load_markdown_files(__file__)
 
 PAGE_CONTENT_PY = rc.Markdown('''
 
-    {buildpack}
-    {project_folder_py}
-    {lifecycle_py}
+{buildpack}
+{project_folder_py}
+{lifecycle_py}
 
-    {app_py}
-    {requirements_py}
-    {procfile_py}
+{app_py}
+{requirements_py}
+{procfile_py}
 
-    {checks}
-    {dokku_scale}            
-    {gitignore}
-    {runtime_py}
-    {apt_files}
+{checks}
+{dokku_scale}            
+{gitignore}
+{runtime_py}
+{apt_files}
  '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
 
 PAGE_CONTENT_CONDA = rc.Markdown('''
 
-    {buildpack}
-    {project_folder_conda}
-    {lifecycle_conda}
+{buildpack}
+{project_folder_conda}
+{lifecycle_conda}
 
-    {app_py}
-    {requirements_conda}
-    {procfile_py}
+{app_py}
+{requirements_conda}
+{procfile_py}
 
-    {checks}
-    {dokku_scale}            
-    {gitignore}
-    {runtime_conda}
-    {apt_files}
+{checks}
+{dokku_scale}            
+{gitignore}
+{runtime_conda}
+{apt_files}
 '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
 
 PAGE_CONTENT_R = rc.Markdown('''
 
-    {buildpack}
-    {project_folder_r}
-    {lifecycle_r}
+{buildpack}
+{project_folder_r}
+{lifecycle_r}
 
-    {app_r}
-    {init_r}
-    {procfile_r}
+{app_r}
+{init_r}
+{procfile_r}
 
-    {checks_r}
-    {dokku_scale}          
-    {gitignore}
-    {runtime_conda}
-    {apt_files}
-'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
+{checks_r}
+{dokku_scale}          
+{gitignore}
+{runtime_conda}
+{apt_files}
+'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
+    url=(
+'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
+if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
+>To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+>replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+>Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+''')
+))
 
 PYTHON_TAB = html.Div([
     PAGE_CONTENT_PY
