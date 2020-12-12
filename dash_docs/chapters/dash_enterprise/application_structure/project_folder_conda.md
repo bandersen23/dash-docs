@@ -30,6 +30,7 @@ A more complex project structure might look like this:
 ```
 |-- app.py
 |-- CHECKS
+|-- .condarc
 |-- Procfile
 |-- conda-requirements.txt
 |-- requirements.txt

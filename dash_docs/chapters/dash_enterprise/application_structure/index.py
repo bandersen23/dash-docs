@@ -56,7 +56,7 @@ PAGE_CONTENT_R = rc.Markdown('''
 {runtime_conda}
 {apt_files}
 '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
-    url=(
+    url = (
 'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
 if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
 >To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
@@ -67,27 +67,6 @@ if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
 
 PYTHON_TAB = html.Div([
     PAGE_CONTENT_PY
-
-    # rc.Markdown(content['lifecycle_py.md'].format(
-    #     url=(
-    #         'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
-    #         if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
-    #         >To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
-    #         >replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
-    #         >Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
-    #         >
-    #     ''')
-    # )),
-    # rc.Markdown(content['requirements.md'].format(
-    #     url=(
-    #         'something' if 'DASH_DOCS_URL_PREFIX' in os.environ
-    #         else 'another thing'
-    #     )
-    # )),
-
-    # html.Hr(),
-
-    # rc.Markdown(content['runtime.md']),
 ])
 
 CONDA_TAB = html.Div([
@@ -103,8 +82,10 @@ layout = html.Div([
     html.Div(''),
 
     dcc.Tabs([
-        dcc.Tab(label='Python', children=PYTHON_TAB),
-        dcc.Tab(label='Conda', children=CONDA_TAB),
-        dcc.Tab(label='R', children=R_TAB)
+        dcc.Tab(label = 'Python', children = PYTHON_TAB),
+        dcc.Tab(label = 'Conda', children = CONDA_TAB),
+        dcc.Tab(label = 'R', children = R_TAB)
     ])
 ])
+
+

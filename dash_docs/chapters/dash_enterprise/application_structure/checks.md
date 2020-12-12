@@ -1,4 +1,3 @@
-
 ## CHECKS
 
 `CHECKS` is an optional text file that allows you to precisely modify Dash 
@@ -125,7 +124,7 @@ if __name__ == '__main__':
 
 ```
 
-The example app's `CHECKSFILE` will then resemble:
+The example app's `CHECKS` file will then resemble:
 
 ```
 WAIT=15

@@ -87,9 +87,10 @@ Werkzeug==1.0.1
 zipp==3.4.0
 ```
 
-For packages not available on conda channels — notably all Dash Enterprise packages 
-— list them in a `requirements.txt` file located in your app's root directory. Those dependencies
-will be installed with `pip` when the app is deployed.
+## requirements.txt
+
+For packages not available on conda channels — notably all Dash Enterprise packages — 
+list them in a `requirements.txt` file located in your app's root directory.
 
 The `requirements.txt` file may resemble:
 
@@ -101,3 +102,5 @@ dash-snapshots==1.3.2
 dash-design-kit==1.5.4
 
 ```
+
+Those dependencies will be installed with `pip` when the app is deployed.
