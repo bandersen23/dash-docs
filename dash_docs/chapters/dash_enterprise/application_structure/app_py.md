@@ -15,5 +15,3 @@ server = app.server
 ...
 
 ```
-
-{url_template_py}

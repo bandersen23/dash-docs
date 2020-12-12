@@ -39,7 +39,7 @@ the `DOKKU_SCALE` file (optional) or in the App Manager.
 17. Restart the deployment process every 24 hours on Dash Enterprise Kubernetes to 
     prevent long-running apps from going down (not available on Dash Enterprise Single Server).
 
-{url}
+{kubernetes}
 
 > Steps 1-7 are used to create the Docker image for a Dash Enterprise Workspace and the 
 > remaining steps to deploy the container are skipped.

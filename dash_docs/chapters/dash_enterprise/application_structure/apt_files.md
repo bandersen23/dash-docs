@@ -37,8 +37,6 @@ unixodbc
 unixodbc-dev
 ```
 
-{url_apt_packages}
-
 ***
 
 **dpkg-packages**
@@ -115,8 +113,6 @@ deb http://archive.ubuntu.com/ubuntu/ bionic-security main universe
 deb http://archive.ubuntu.com/ubuntu/ bionic-updates main universe
 deb http://apt.postgresql.org/pub/repos/apt/ bionic-pgdg main
 ```
-
-{url_apt_source_list}
 
 **apt-repositories**
 

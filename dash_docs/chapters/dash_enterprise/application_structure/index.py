@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import dash_html_components as html
 from dash_docs import reusable_components as rc
 import dash_core_components as dcc
@@ -21,7 +22,15 @@ PAGE_CONTENT_PY = rc.Markdown('''
 {gitignore}
 {runtime_py}
 {apt_files}
- '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
+'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
+    kubernetes = (
+'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
+if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
+>To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+>replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+>Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+''')
+))
 
 PAGE_CONTENT_CONDA = rc.Markdown('''
 
@@ -38,7 +47,15 @@ PAGE_CONTENT_CONDA = rc.Markdown('''
 {gitignore}
 {runtime_conda}
 {apt_files}
-'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
+'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
+    kubernetes = (
+'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
+if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
+>To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+>replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+>Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+''')
+))
 
 PAGE_CONTENT_R = rc.Markdown('''
 
@@ -51,12 +68,12 @@ PAGE_CONTENT_R = rc.Markdown('''
 {procfile_r}
 
 {checks_r}
-{dokku_scale}          
+{dokku_scale}
 {gitignore}
 {runtime_conda}
 {apt_files}
 '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
-    url = (
+    kubernetes = (
 'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
 if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
 >To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 

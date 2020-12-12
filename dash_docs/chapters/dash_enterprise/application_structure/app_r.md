@@ -22,5 +22,3 @@ app$layout(
 app$run_server()
 
 ```
-
-{url_template_r}
