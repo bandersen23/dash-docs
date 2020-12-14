@@ -2,20 +2,44 @@
 
 When you run `git push plotly master`, Dash Enterprise will do the following:
   
-1. Create a new Docker container from builder image
-2. Mount app source code
-3. Detect which Buildpack to use based off of files present in app root folder
+1. Mount app source code
+2. Detect which Buildpack to use based off of files present in app root folder. This R buildpack is detected by discovering `app.R` or `init.R` files.You must also `.buildpacks` file that contains the Dash for R buildpack URL
 
-> Note that the R buildpack does not work in Workspaces.
+> **Workspaces do not support `R` buildpacks.** You cannot preview `R` apps in Workspaces.
+> This does not affect your ability to deploy these apps from workspaces.
 
-4. Install Conda runtime environment — override with a `runtime.txt` file
-5. Install APT packages: provided with `apt-packages` file
-6. Install R and app's R dependencies with `init.R` files
-7. Run pre-deployment script specified in `app.json`
-8. Scale containers for each process as specified in `DOKKU_SCALE`
-9. Run commands in each container as specified in `Procfile`
-10. Run pre-release app health checks with `CHECKS` file
-11. Release: Open app to web traffic
-12. Run post-deployment script specified in `app.json`
+3. Install custom APT packages if an `apt-packages` is provided and custom `.deb` if a `dkpg-package` file is provided (optional)
+4. Install `R` app dependencies specified in `init.R`
+5. Run a build script if an `app.json` file is included with a `"predeploy"` field (optional). Changes made by this script will be committed to the Docker 
+image.
+6. At this point, the Docker images have been created. In Dash Enterprise 
+Kubernetes, these images are pushed to the container registry
+7. Scale containers for each process as specified in `DOKKU_SCALE`
+8. Run the `release` command in the image if specified in the `Procfile` (optional)
+9. Create Docker containers from the Docker image on the host (Dash Enterprise 
+Single Server) or in the Kubernetes cluster ({kubernetes}). The number of containers created for each process type can be configured with the `DOKKU_SCALE` file (optional) or in the App Manager
+10. Run post-deployment script specified in `app.json`
+11. Run the `postdeploy` script in each container if the `app.json` file is included (optional)
+12. Run the commands as specified in `Procfile` in each container
+13. Run the app health checks. If the health checks fail, abort the deployment and 
+keep the previous containers running. Override the default health checks with 
+the `CHECKS` file (Dash Enterprise Single Server) or the `readiness` field in 
+the `app.json` file {kubernetes}
+14. Release: Open app to web traffic
+15. Remove the old containers & images
+16. Run periodic `liveness` checks on {kubernetes} to ensure that the app is still up and to restart it if not (not available on Dash Enterprise Single Server).
+17. Restart the deployment process every 24 hours on {kubernetes} to prevent long-running apps from going down (not available on Dash Enterprise Single Server).
 
-{kubernetes}
+
+> On **subsequent deploys**, Dash Enterprise will detect which files have changed. If the file has
+> changed Dash Enterprise will rerun the step. If not it will use the artifacts of that step from the previous image.
+> For example, if `init.R` hasn't changed then the packages won't be reinstalled (or upgraded!) on subsequent deploys.
+
+
+> In **Dash Enterprise Workspaces**, steps 1-7 are used to create the Docker image that 
+> resembles the Dash app image.  The remaining steps to deploy the container are skipped.
+
+
+{kubernetes_notes}
+
+---

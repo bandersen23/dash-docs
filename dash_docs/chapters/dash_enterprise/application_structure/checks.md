@@ -1,13 +1,14 @@
 ## CHECKS
 
 `CHECKS` is an optional text file that allows you to precisely modify Dash 
-Enterprise's app health diagnostic checks. 
+Enterprise's app health diagnostic checks. It must be place in your app's root
+directory.
 
 > `CHECKS` is only available on Dash Enterprise Single Server. Similar functionality 
 > for Dash Enterprise Kubernetes is available via the `app.json` file. 
 
 By default, Dash Enterprise will wait 10 seconds after starting each container 
-before assuming it is up and proceeding with the deployment. Once this happens for 
+before assuming it is healthy and continuing with the deployment. Once this happens for 
 all of the containers associated with the deployed Dash app, web traffic will then 
 be directed to the new containers. Dash Enterprise will then wait an additional 60 
 seconds to give time for old containers with longer running connections 
@@ -36,32 +37,28 @@ In the simple example above, Dash Enterprise will wait 15 seconds before perform
 the check and will allow up to 10 seconds for a response from the app, and attempt the 
 check 3 times before marking it as a failure. 
 
-Note that omitting `CHECKS` file instructions will result in Dash Enterprise skipping
-those checks. 
+Note that omitting or commenting out `WAIT`, `TIMEOUT` or `ATTEMPTS` from a `CHECKS` file will cause Dash Enterprise to use
+default setting values. 
 
-```
-WAIT=15
-# TIMEOUT=10
-ATTEMPTS=3
-```
-
-You may also include instructions that are specified in the format of a relative 
+Other instructions must be specified in the form of a relative 
 link, followed by content that Dash Enterprise should find in the response. 
 The expected content can be omitted if text content is not relevant. 
-(e.g if you want to check whether an image can be served). The example below checks 
-that `dash-logo.png` is being served to the app.
-
 
 ```
 WAIT=15
 TIMEOUT=10
 ATTEMPTS=3
-
-/<your-dash-app>/assets/images/dash-logo.png
+/<your-dash-app>/_dash-layout analytics
 ```
 
-Another use case for `CHECKS` might be to verify that an app that takes
-a few minutes to load pass checks.  
+In this example, Dash Enterprise will visit the URL /<your-dash-app>/_dash-layout and check that the response contains the text "analytics". In practice, replace <your-dash-app> with the name of your Dash app on Dash Enterprise. The /_dash-layout path will return the JSON-ified content of your app.layout. Replace "analytics" with text that appears in the /_dash-layout. You can visit this URL directly to inspect its contents at https://<your-dash-enterprise>/<your-dash-app>/_dash-layout.
+
+If "analytics" is in the response within 10 seconds (TIMEOUT), Dash Enterprise will consider the check to be passed and will begin serving traffic to this new version. If "analytics" isn't in the response after 10 (`TIMEOUT`) seconds, Dash enterprise will try two more times (`ATTEMPTS`). If the next two attempts fail, Dash Enterprise will abort the deployment and keep the previous version of the app running.
+
+The expected content (in the previous example "analytics") can be omitted. If omitted, Dash Enterprise checks that the response has a 200 Status Code.
+
+Another use case for `CHECKS` is to avoid downtime 110 seconds (120-10) seconds 
+of downtime if an app takes a long time to start.
 
 ```python
 import dash
@@ -84,23 +81,20 @@ if __name__ == '__main__':
 ```
 
 In this example, we are simulating an app with a two-minute loading time with
-`time.sleep(120)`. Deploying this example without a `CHECKS` file will result in 
-Dash Enterprise running an app health check with its default values.
-Dash Enterprise will then be serving an app that has not yet loaded and prompting a 
-`[CRITICAL] WORKER TIMEOUT` error.
+`time.sleep(120)`. 
 
-The inclusion of the following `CHECKS` file resolves this issue by delaying web 
-traffic long enough for the app to fully load:
+Adding checks will prevent the end user from encountering downtime while the new version of the app is getting spun up. By including a `CHECKS` file, the new version won't accept traffic until the check passes. The check can be configured to wait 120 seconds.
 
 ```
-WAIT=15
-TIMEOUT=130
-ATTEMPTS=2
+WAIT=120
+TIMEOUT=10
+ATTEMPTS=3
 ```
 
 You can also create your own health check by writing a custom Flask endpoint that will return
 a value of your choosing. In the following example, we include  `@app.server.route('/status')` 
-that returns `OK'.
+that returns `OK'. In practice, you can place whatever health checks you would like within this 
+function. This might include checking the uptime for 3rd party services like databases or APIs.
 
 ```python
 import dash
@@ -131,6 +125,8 @@ WAIT=15
 TIMEOUT=130
 ATTEMPTS=2
 
-<your-dash-app>/status OK
+/<your-dash-app>/status OK
 
 ```
+
+---

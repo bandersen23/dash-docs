@@ -16,10 +16,8 @@ This will include all of the "subdependencies" of the packages that you rely on.
 For example, `dash` itself relies on 17 other packages that have their own version numbers.
 You may inspect which python packages are currently installed for your app in the App Manager.
 
-If you don't include the subdependencies in your `requirements.txt` file, then Dash Enterprise 
-will install the latest versions of these subdependencies when you deploy your app for the first time
-or restart the application. This could mean that your deployed application uses different versions
-of packages than your development environment which could cause unpredictable errors.
+If you don't include the subdependencies in your `requirements.txt` file, then Dash Enterprise will install the latest versions of these subdependencies when you 
+deploy your app for the first time. This could mean that your deployed application uses different versions of packages than your development environment which could cause unpredictable errors.
 
 Certain versions packages that you install on Windows may not be available on the Linux containers
 that Dash Enterprise uses or vice versa. If you run into cross-operating system package issues,
@@ -93,3 +91,5 @@ zipp==3.4.0
 You can supply additional options to the top of the file. See the official 
 [Pip requirements.txt Docs](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
 for more details.
+
+---

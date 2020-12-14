@@ -25,7 +25,7 @@ A simple Dash app `Procfile` will resemble the following:
 web: gunicorn app:server --workers 4
 ```
 
-A Dash app running  a background task queue will have `Procfile` similar to this:
+A Dash app running  a background task queue might have a `Procfile` similar to this:
 
 ```
 web: gunicorn app:server --workers 4
@@ -41,7 +41,7 @@ worker: celery -A index:celery_instance worker --concurrency=2
 scheduler: celery -A index:celery_instance beat
 ```
 Note that `worker` and `scheduler` process names are arbitrary. 
-We recommend using descriptive names as they will appear in all logs and in the 
+However, we recommend using descriptive names as they will appear in all logs and in the 
 app manager.
 
 **Web Process**
@@ -51,11 +51,14 @@ to run your Dash app with `gunicorn`, your Dash app's web server. In the followi
 example we are declaring `gunicorn` as our web server with `web: gunicorn`:
 
 ```
-web: gunicorn app:server --workers 4
+web: gunicorn app:server --workers 4 --preload
 
 ```
 
-These commands are [standard `gunicorn` commands](https://docs.gunicorn.org/en/latest/run.html).
+This command is a [standard `gunicorn` commands](https://docs.gunicorn.org/en/latest/run.html) used to run your Dash app. It's the "production" alternative to running your app with `python app.py`.
+
+
+`app` refers to a file named "`app.py`". `server` refers to the variable named `server` inside that file (see the `app.py` section in this document). If the entry point to your app was e.g. `index.py` then this would be `web: gunicorn index:server --workers 4 --preload`
 
 `gunicorn` accepts a [wide variety of settings](https://docs.gunicorn.org/en/latest/settings.html). 
 Here are a few common flags:
@@ -73,29 +76,27 @@ web: gunicorn app:server --workers 4
 
 ```
 
-2. `--timeout` allows you to modify the default amount of time available for your workers to complete
-a task. 
+2. Use the `--preload` flag to reduce your application's memory and speed up boot time.  You can also use preload to avoid the `[CRITICAL] WORKER TIMEOUT` error.
+Avoid the `--preload` flag if you are using shared database connection pools
+see [Database Connections](/dash-enterprise/database-connections).
+See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) for more details.
+
+```
+web: gunicorn app:server --workers 4 --preload
+```
+
+3. `--timeout` (default 30). Workers silent for more than this many seconds are killed and restarted. A `[CRITICAL] WORKER TIMEOUT` error will be printed.
+
+Timeouts are usually encountered in two scenarios:
+- Apps that take longer than 30 seconds to start. In this scenario, try the `--preload` flag. If you can't use `--preload`, you can increase this timeout.
+- Callbacks that take longer than 30 seconds to finish. In this scenario, consider using a background job queue with the Dash Enterprise Snapshot Engine. Alternatively, increase this timeout and ask your server admin to increase the timeout setting in the Dash Enterprise Server Manager. We recommend using a job queue instead of increasing the timeouts because it will make your application more scalable.
 
 See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) for
 details.
 
 ```
 web: gunicorn app:server --workers 4 --timeout 240
-
 ```
-
-3. Use the `--preload` flag to reduce your application's memory and speed up boot time.  
-
-Avoid the `--preload` flag if you are using shared database connection pools
-see [Database Connections](/dash-enterprise/database-connections).
-
-See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) 
-for more details.
-
-```
-web: gunicorn app:server --workers 4 --preload
-
-``` 
 
 **Release Process**
 
@@ -109,6 +110,13 @@ sending datasets, CSS, JS or other assets from your app’s image to a CDN or S3
 ```
 release: ./release-tasks.sh
 web: gunicorn app:server --workers 4
+
+```
+
+You could also run these one-off commands as part of the web process:
+
+```
+web: ./release-tasks.sh && gunicorn app:server --workers 4
 
 ```
 

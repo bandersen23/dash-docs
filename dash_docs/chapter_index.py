@@ -347,7 +347,7 @@ DASH_ENTERPRISE_URLS = {
                 },
                 {
                     'url': '/dash-enterprise/checks',
-                    'content': chapters.dash_enterprise.dash_enterprise_chapters.Checks,
+                    'content': chapters.dash_enterprise.application_structure.index.layout,
                     'name': 'Dash Enterprise App Health Checks',
                     'description': 'Create custom checks to ensure that a newly deployed app can serve traffic.'
                 },

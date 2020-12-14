@@ -27,9 +27,11 @@ worker-beat=1
 
 ```
 
-We recommend scaling your Dash app by enabling the gunicorn **--worker**
-and **--preload** flags before using a `DOKKU_FILE`.
+We recommend scaling your Dash app by enabling the `gunicorn` **--worker**
+and **--preload** flags in your `Procfile` before modifying a `DOKKU_FILE`.
 
-Scaling this way consumes significantly less processing and  memory resources.
+Scaling with **--worker** and **--worker** consumes significantly memory.
 
-''',
+> This recommendation does not apply to R (R does not use `gunicorn`).
+
+---

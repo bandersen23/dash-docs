@@ -6,85 +6,111 @@ from dash_docs import tools
 import os
 
 content = tools.load_markdown_files(__file__)
+check_url = tools.is_in_dash_enterprise()
 
-PAGE_CONTENT_PY = rc.Markdown('''
+PAGE_CONTENT_PY = [rc.Markdown('''
 
 {buildpack}
 {project_folder_py}
 {lifecycle_py}
-
+# Required Files
 {app_py}
 {requirements_py}
 {procfile_py}
-
+# Optional Files
 {checks}
+{app_json}
 {dokku_scale}            
 {gitignore}
 {runtime_py}
+'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
+kubernetes_notes = (
+'' if check_url else '''
+> **To view the Kubernetes docs**, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+> replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+> Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+'''),
+kubernetes = ('[Dash Enterprise Kubernetes](/Docs/kubernetes)' if check_url else 'Dash Enterprise Kubernetes'),
+configure_system_dependencies = ('[Configuring System Dependencies](/dash-enterprise/configure-system-dependencies)')
+)),
+
+html.Details(open=False, children=[
+    html.Summary(children=[ '**As of 4.0.1, Dash Enterprise supports the following Python versions:**']),
+    rc.Markdown('''{runtime_list_py}'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
+]),
+
+rc.Markdown('''
+---
 {apt_files}
 '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
-    kubernetes = (
-'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
-if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
->To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
->replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
->Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
-''')
+kubernetes_notes = (
+'' if check_url else '''
+> **To view the Kubernetes docs**, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+> replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+> Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+'''),
+kubernetes = ('[Dash Enterprise Kubernetes](/Docs/kubernetes)' if check_url else 'Dash Enterprise Kubernetes'),
+configure_system_dependencies = ('[Configuring System Dependencies](/dash-enterprise/configure-system-dependencies)')
 ))
+]
 
 PAGE_CONTENT_CONDA = rc.Markdown('''
 
 {buildpack}
 {project_folder_conda}
 {lifecycle_conda}
-
+# Required Files
 {app_py}
 {requirements_conda}
 {procfile_py}
-
+# Optional Files
 {checks}
+{app_json}
 {dokku_scale}            
 {gitignore}
 {runtime_conda}
 {apt_files}
 '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
-    kubernetes = (
-'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
-if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
->To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
->replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
->Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
-''')
+kubernetes_notes = (
+'' if check_url else '''
+> **To view the Kubernetes docs**, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+> replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+> Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+'''),
+kubernetes = ('[Dash Enterprise Kubernetes](/Docs/kubernetes)' if check_url else 'Dash Enterprise Kubernetes'),
+configure_system_dependencies = ('[Configuring System Dependencies](/dash-enterprise/configure-system-dependencies)')
 ))
+
 
 PAGE_CONTENT_R = rc.Markdown('''
 
 {buildpack}
 {project_folder_r}
 {lifecycle_r}
-
+# Required Files
 {app_r}
 {init_r}
 {procfile_r}
-
+# Optional Files
 {checks_r}
+{app_json}
 {dokku_scale}
 {gitignore}
-{runtime_conda}
-{apt_files}
+{apt_files_r}
 '''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}).format(
-    kubernetes = (
-'See [Kubernetes](/Docs/kubernetes) Chapter for more details.' 
-if 'DASH_DOCS_URL_PREFIX' in os.environ else '''
->To view the Kubernetes Docs, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
->replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
->Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
-''')
+kubernetes_notes = (
+'' if check_url else '''
+> **To view the Kubernetes docs**, visit: https://<your-dash-enterprise-hostname\>/Docs/Kubernetes, 
+> replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
+> Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)
+'''),
+kubernetes = ('[Dash Enterprise Kubernetes](/Docs/kubernetes)' if check_url else 'Dash Enterprise Kubernetes'),
+configure_system_dependencies = ('[Configuring System Dependencies](/dash-enterprise/configure-system-dependencies)')
 ))
 
-PYTHON_TAB = html.Div([
+PYTHON_TAB = html.Div(
     PAGE_CONTENT_PY
-])
+)
 
 CONDA_TAB = html.Div([
     PAGE_CONTENT_CONDA
@@ -104,5 +130,4 @@ layout = html.Div([
         dcc.Tab(label = 'R', children = R_TAB)
     ])
 ])
-
 

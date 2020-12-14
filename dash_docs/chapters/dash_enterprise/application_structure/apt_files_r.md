@@ -1,10 +1,12 @@
+
+
 ## APT files
 
 APT files can be used to install system-level packages via the `apt` package manager.
 Supported APT files include the following:
 
 ```
-apt-packages
+apt-packages 
 dpkg-packages
 apt-conf
 apt-env
@@ -34,6 +36,15 @@ vim
 unixodbc
 unixodbc-dev
 ```
+
+<!-- ```
+Installing binary dependencies from apt-packages
+remote: W: GPG error: https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ InRelease: The following signatures were invalid: EXPKEYSIG 51716619E084DAB9 Michael Rutter <marutter@gmail.com>
+remote: E: The repository 'https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ InRelease' is not signed.
+To dash-playground.plotly.host:aa-tngo-r
+ ! [remote rejected] master -> master (pre-receive hook declined)
+error: failed to push some refs to 'dokku@dash-playground.plotly.host:aa-tngo-r'
+``` -->
 
 ---
 
@@ -145,3 +156,4 @@ Requires an empty line at end of file.
 ```shell
 ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true
 ```
+

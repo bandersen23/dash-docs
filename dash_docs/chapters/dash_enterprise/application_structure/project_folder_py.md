@@ -1,10 +1,11 @@
 ## Project Folder
 
-To deploy an app with Dash Enterprise two additional files are needed:
+To deploy an app with Dash Enterprise two additional files are needed in your **project folder**:
 
 1. A `requirements.txt` file to describe your app's dependencies
 2. A `Procfile` to declare what commands & processes should be run to run the Dash app and any other background processes
 
+A minimal project structure might look like this:
 ```
 |-- app.py
 |-- Procfile
@@ -27,3 +28,5 @@ A more complex project structure might look like:
 |-- apt-packages
 |-- app.json
 ```
+
+---

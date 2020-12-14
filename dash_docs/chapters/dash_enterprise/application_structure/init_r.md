@@ -7,3 +7,5 @@ install.packages('remotes')
 
 remotes::install_github('plotly/dashR', upgrade=TRUE)
 ```
+
+---

@@ -1,10 +1,9 @@
 
-The Conda buildpack is similar to the Python buildpack except it includes `Miniconda` 
-and allows you to install packages with the `conda-requirements.txt` file.
+The Conda buildpack is similar to the Python buildpack except it includes `Miniconda` and allows you to install packages with `miniconda` via the `conda-requirements.txt` file.
 
 ## Project Folder
 
-To deploy an app with Dash Enterprise and Conda, three additional files are needed:
+To deploy an app with Dash Enterprise and Conda, three additional files are needed in your **project folder**:
 
 1. A `requirements.txt` file to describe packages to be installed with `pip`. This 
     include Dash Enterprise dependencies like `dash-design-kit` and `dash-snapshots`.
@@ -22,8 +21,7 @@ A minimal project structure might look like this:
 ```
 
 You may also include optional files such as `apt-packages` file if your app requires additional system-level packages like database
-drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file
-if you want to customize pre-release health checks.
+drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize pre-release health checks. If you need to specify your conda runtime declare it in a `conda-runtime.txt` file.
 
 A more complex project structure might look like this:
 
@@ -33,7 +31,10 @@ A more complex project structure might look like this:
 |-- .condarc
 |-- Procfile
 |-- conda-requirements.txt
+|-- conda-runtime.t
 |-- requirements.txt
 |-- apt-packages
 |-- app.json
 ```
+
+---
