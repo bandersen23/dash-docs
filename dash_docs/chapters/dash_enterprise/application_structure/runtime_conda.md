@@ -1,7 +1,7 @@
 conda-runtime.txt
 
 `conda-runtime.txt` is a required text files that specifies Conda's runtime. It must be placed in
-your app's root directory. it should contain the version of conda to install, in the 
+your app's root directory. It should contain the version of conda to install, in the 
 form of Miniconda<2-or-3>-<conda-version>, e.g. Miniconda3-4.5.12.
 
 ```
