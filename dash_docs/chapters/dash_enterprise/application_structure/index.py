@@ -87,7 +87,7 @@ rapids_template = (
 > replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
 > Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)'''),
 conda_template = (
-'[Conda Sample App Template' if check_url else if check_url else '''
+'[Conda Sample App Template' if check_url else '''
 > **To view COnda Sample App Template**, visit: https://<your-dash-enterprise-hostname\>/Docs/templates/rapids, 
 > replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
 > Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)'''),
