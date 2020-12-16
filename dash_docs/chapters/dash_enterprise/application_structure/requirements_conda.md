@@ -55,6 +55,10 @@ dash-design-kit==1.5.4
 
 ```
 
+You can supply additional options to the top of the file. See the official 
+[Pip requirements.txt docs](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
+for more details.
+
 Those dependencies will be installed with `pip` when the app is deployed.
 
 ---

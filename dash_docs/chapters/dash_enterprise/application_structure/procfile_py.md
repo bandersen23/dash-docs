@@ -55,7 +55,7 @@ web: gunicorn app:server --workers 4 --preload
 
 ```
 
-This command is a [standard `gunicorn` commands](https://docs.gunicorn.org/en/latest/run.html) used to run your Dash app. It's the "production" alternative to running your app with `python app.py`.
+This command is a [standard `gunicorn` command](https://docs.gunicorn.org/en/latest/run.html) used to run your Dash app. It's the "production" alternative to running your app with `python app.py`.
 
 
 `app` refers to a file named "`app.py`". `server` refers to the variable named `server` inside that file (see the `app.py` section in this document). If the entry point to your app was e.g. `index.py` then this would be `web: gunicorn index:server --workers 4 --preload`
@@ -68,17 +68,14 @@ Here are a few common flags:
 This is typically between 2 and 8. Adding workers will enable your application to serve more 
 users at once but will increase the CPU & memory usage. 
 
-See [Gunicorn Docs on Workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers) 
-for more details.
-
 ```
 web: gunicorn app:server --workers 4
 
 ```
 
-2. Use the `--preload` flag to reduce your application's memory and speed up boot time.  You can also use preload to avoid the `[CRITICAL] WORKER TIMEOUT` error.
+1. Use the `--preload` flag to reduce your application's memory and speed up boot time.  You can also use preload to avoid the `[CRITICAL] WORKER TIMEOUT` error.
 Avoid the `--preload` flag if you are using shared database connection pools
-see [Database Connections](/dash-enterprise/database-connections).
+(See the [Database Connections docs](/dash-enterprise/database-connections)).
 See [Gunicorn Docs on Preloading](https://docs.gunicorn.org/en/latest/settings.html#preload-app) for more details.
 
 ```
@@ -89,7 +86,7 @@ web: gunicorn app:server --workers 4 --preload
 
 Timeouts are usually encountered in two scenarios:
 - Apps that take longer than 30 seconds to start. In this scenario, try the `--preload` flag. If you can't use `--preload`, you can increase this timeout.
-- Callbacks that take longer than 30 seconds to finish. In this scenario, consider using a background job queue with the Dash Enterprise Snapshot Engine. Alternatively, increase this timeout and ask your server admin to increase the timeout setting in the Dash Enterprise Server Manager. We recommend using a job queue instead of increasing the timeouts because it will make your application more scalable.
+- Callbacks that take longer than 30 seconds to finish. In this scenario, consider using a background {job_queue} with the Dash Enterprise Snapshot Engine. Alternatively, increase this timeout and ask your server admin to increase the timeout setting in the Dash Enterprise Server Manager. We recommend using a {job_queue} instead of increasing the timeouts because it will make your application more scalable.
 
 See [Gunicorn Docs on Timeout](https://docs.gunicorn.org/en/stable/settings.html#timeout) for
 details.
@@ -113,7 +110,7 @@ web: gunicorn app:server --workers 4
 
 ```
 
-You could also run these one-off commands as part of the web process:
+As an alternative to a release command, you could could run these one-off commands as part of the web process:
 
 ```
 web: ./release-tasks.sh && gunicorn app:server --workers 4
@@ -123,7 +120,7 @@ web: ./release-tasks.sh && gunicorn app:server --workers 4
 **Other Processes**
 
 You can also run other background processes in their own containers.
-For example, you may run a background job queue to periodically 
+For example, you may run a background {job_queue} to periodically 
 update your application's data, generate snapshots, or process long-running tasks:
 
 ```

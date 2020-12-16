@@ -3,9 +3,7 @@
 
 `requirements.txt` is a necessary text file that describes of all of your Dash app's Python
 dependencies. During the deployment process, Dash Enterprise will install all of the
-listed packages. Since Dash apps use `gunicorn` as their Python Web 
-Server Gateway Interface
-(WSGI) HTTP server, don't forget to include `gunicorn`!
+listed packages. Since it's common to run Dash apps with `gunicorn` in your `Procfile`, don't forget to include `gunicorn`!
 
 We recommend including all Python packages and their version numbers inside your 
 `requirements.txt`.
@@ -89,7 +87,7 @@ zipp==3.4.0
 ```
 
 You can supply additional options to the top of the file. See the official 
-[Pip requirements.txt Docs](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
+[Pip requirements.txt docs](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
 for more details.
 
 ---
