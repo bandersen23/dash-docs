@@ -88,7 +88,7 @@ rapids_template = (
 > Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)'''),
 conda_template = (
 '[Conda Sample App Template' if check_url else '''
-> **To view COnda Sample App Template**, visit: https://<your-dash-enterprise-hostname\>/Docs/templates/rapids, 
+> **To view Conda Sample App Template**, visit: https://<your-dash-enterprise-hostname\>/Docs/templates/rapids, 
 > replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
 > Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)'''),
 job_queue = ('[job queue](/Docs/dash-snapshots/usage-job-queue)' if check_url else 'job queue')
@@ -127,13 +127,13 @@ PYTHON_TAB = html.Div(
     PAGE_CONTENT_PY
 )
 
-CONDA_TAB = html.Div([
+CONDA_TAB = html.Div(
     PAGE_CONTENT_CONDA
-])
+)
 
-R_TAB = html.Div([
+R_TAB = html.Div(
     PAGE_CONTENT_R
-])
+)
 
 layout = html.Div([
     html.H1('Application Structure'),
