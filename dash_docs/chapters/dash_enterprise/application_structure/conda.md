@@ -1,3 +1,6 @@
+The Conda buildpack is similar to the Python buildpack except it includes `Miniconda` 
+and allows you to install packages with `miniconda` via the `conda-requirements.txt` file.
+
 ## Conda
 
 Conda is a cross-platform packaging manager that can be used to handle your app's 

@@ -1,6 +1,3 @@
-
-The Conda buildpack is similar to the Python buildpack except it includes `Miniconda` and allows you to install packages with `miniconda` via the `conda-requirements.txt` file.
-
 ## Project Folder
 
 To deploy an app with Dash Enterprise and Conda, three additional files are needed in your **project folder**:
