@@ -86,7 +86,7 @@ Werkzeug==1.0.1
 zipp==3.4.0
 ```
 
-You can supply additional options to the top of the file. See the official 
+You can supply additional options to the top of the file. See [Adding Private Packages chapter](/dash-enterprise/private-packages) and the official 
 [Pip requirements.txt docs](https://pip.pypa.io/en/stable/reference/pip_install/#requirements-file-format)
 for more details.
 

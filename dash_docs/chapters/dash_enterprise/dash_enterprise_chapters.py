@@ -3105,9 +3105,6 @@ Troubleshooting = html.Div(children=[
         remote: unknown shorthand flag: 'e' in -e
         remote: See 'docker image build --help'
         ```
-<<<<<<< HEAD
-<<<<<<< HEAD
-
 
         This error can happen if your project contains a `Dockerfile`.
         Dash Enterprise does not support projects that contain a `Dockerfile`.
@@ -3142,15 +3139,7 @@ Troubleshooting = html.Div(children=[
         remote: See 'docker image build --help'
         ```
 
-
-=======
-        
-        
->>>>>>> pr update2
-=======
-
-
->>>>>>> rm content that we're going to move elsewhere
+        rm content that we're going to move elsewhere
         This error can happen if your project contains a `Dockerfile`.
         Dash Enterprise does not support projects that contain a `Dockerfile`.
         To resolve, remove the `Dockerfile` from your project and redeploy.

@@ -16,7 +16,7 @@ A minimal project structure might look like this:
 |-- .buildpacks
 ```
 
-You may also include optional files such as an `apt-packages` file if your app requires additional system-level packages like database drivers, an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize 
+You may also include optional files such an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize 
 pre-release health checks. See [Files Reference](#optional-files) section
 below for more details.
 

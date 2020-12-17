@@ -9,7 +9,6 @@ python-2.7.16 (deprecated)
 python-2.7.9 (deprecated)
 python-3.6.0
 python-3.6.1
-python-3.6.10
 python-3.6.2
 python-3.6.3
 python-3.6.4
@@ -18,6 +17,7 @@ python-3.6.6
 python-3.6.7
 python-3.6.8
 python-3.6.9
+python-3.6.10
 python-3.7.0
 python-3.7.1
 python-3.7.2

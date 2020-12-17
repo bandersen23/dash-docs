@@ -1,7 +1,7 @@
 
 ## DOKKU_SCALE
 
-`DOKKU_SCALE` is an optional text file used to increase the number of containers 
+`DOKKU_SCALE` is an optional text file used to specify the number of containers that should be 
 created for the process types defined in your app's `Procfile` . By default Dash Enterprise runs a single web container.
 
 You will need `DOKKU_SCALE` if your `Procfile` includes 
@@ -12,25 +12,25 @@ containers to 1** as well. For example:
 
 ```
 web=1
-worker-default=1
-worker-beat=1
+worker=1
+scheduler=1
 
 ```
 
 Containers are stateless, so you can scale them up as long as your server
-or Kubernetes cluster have enough processing and memory resources available:
+or Kubernetes cluster has enough processing and memory resources available:
 
 ```
 web=4
-worker-default=1
-worker-beat=1
+worker=1
+scheduler=1
 
 ```
 
-We recommend scaling your Dash app by enabling the `gunicorn` **--worker**
+However, we recommend scaling your Dash app by enabling the `gunicorn` **--worker**
 and **--preload** flags in your `Procfile` before modifying a `DOKKU_FILE`.
 
-Scaling with **--worker** and **--worker** consumes significantly memory.
+Scaling with **--worker** and **--preload** consumes significantly less memory.
 
 > This recommendation does not apply to R (R does not use `gunicorn`).
 

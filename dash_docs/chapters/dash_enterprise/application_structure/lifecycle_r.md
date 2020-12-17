@@ -2,8 +2,8 @@
 
 When you run `git push plotly master`, Dash Enterprise will do the following:
   
-1. Mount app source code
-2. Detect which Buildpack to use based off of files present in app root folder. This R buildpack is detected by discovering `app.R` or `init.R` files.You must also `.buildpacks` file that contains the Dash for R buildpack URL
+1. Mount app source code.
+2. Detect which Buildpack to use based off of files present in app root folder. This R buildpack is detected by discovering a  `.buildpacks` file that contains the Dash for R buildpack.
 
 > **Workspaces do not support `R` buildpacks.** You cannot preview `R` apps in Workspaces.
 > This does not affect your ability to deploy these apps from workspaces.
@@ -15,19 +15,21 @@ image.
 6. At this point, the Docker images have been created. In Dash Enterprise 
 Kubernetes, these images are pushed to the container registry
 7. Scale containers for each process as specified in `DOKKU_SCALE`
-8. Run the `release` command in the image if specified in the `Procfile` (optional)
+8. Run the `release` command in the image if specified in the `Procfile` (optional).
 9. Create Docker containers from the Docker image on the host (Dash Enterprise 
-Single Server) or in the Kubernetes cluster ({kubernetes}). The number of containers created for each process type can be configured with the `DOKKU_SCALE` file (optional) or in the App Manager
+Single Server) or in the Kubernetes cluster ({kubernetes}). The number of containers created for each process type can be configured with the `DOKKU_SCALE` file (optional) or in the App Manager.
 10. Run post-deployment script specified in `app.json`
-11. Run the `postdeploy` script in each container if the `app.json` file is included (optional)
+11. Run the `postdeploy` script in each container if the `app.json` file is included with a `postdeploy` field (optional)
 12. Run the commands as specified in `Procfile` in each container
 13. Run the app health checks. If the health checks fail, abort the deployment and 
 keep the previous containers running. Override the default health checks with 
 the `CHECKS` file (Dash Enterprise Single Server) or the `readiness` field in 
-the `app.json` file {kubernetes}
+the `app.json` file {kubernetes}.
 14. Release: Open app to web traffic
 15. Remove the old containers & images
-16. Run periodic `liveness` checks on {kubernetes} to ensure that the app is still up and to restart it if not (not available on Dash Enterprise Single Server).
+16. Run periodic `liveness` checks on {kubernetes} if `app.json` includes `liveness` field, to ensure that 
+the app is still up and to restart it if not (not available on Dash Enterprise 
+Single Server).
 17. Restart the deployment process every 24 hours on {kubernetes} to prevent long-running apps from going down (not available on Dash Enterprise Single Server).
 
 

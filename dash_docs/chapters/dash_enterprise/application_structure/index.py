@@ -36,7 +36,7 @@ job_queue = ('[job queue](/Docs/dash-snapshots/usage-job-queue)' if check_url el
 )),
 
 html.Details(open=False, children=[
-    html.Summary(children=[ '**As of 4.0.1, Dash Enterprise supports the following Python versions:**']),
+    html.Summary(children=[rc.Markdown('**As of 4.0.1, Dash Enterprise supports the following Python versions:**')]),
     rc.Markdown('''{runtime_list_py}'''.format(**{k.replace('.md', ''): v for (k, v) in content.items()}))
 ]),
 
@@ -81,14 +81,9 @@ kubernetes_notes = (
 '''),
 kubernetes = ('[Dash Enterprise Kubernetes](/Docs/kubernetes)' if check_url else 'Dash Enterprise Kubernetes'),
 configure_system_dependencies = ('[Configuring System Dependencies](/dash-enterprise/configure-system-dependencies)'),
-rapids_template = (
-'[nVidia Rapids App Template](/Docs/templates/rapids)' if check_url else '''
-> **To view nVidia Rapids App Template**, visit: https://<your-dash-enterprise-hostname\>/Docs/templates/rapids, 
-> replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
-> Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)'''),
-conda_template = (
-'[Conda Sample App Template' if check_url else '''
-> **To view Conda Sample App Template**, visit: https://<your-dash-enterprise-hostname\>/Docs/templates/rapids, 
+rapids_conda_templates = ( 
+'See [NVIDIA Rapids Sample App](/Docs/templates/rapids) and [Conda Sample App](/Docs/templates/conda) for more details' if check_url else '''
+> **To view NVIDIA Rapids and Conda Sample Apps**, visit: https://<your-dash-enterprise-hostname\>/Docs/templates, 
 > replacing <your-dash-enterprise-hostname\> with the hostname of your licensed 
 > Dash Enterprise in your VPC. [Look up the hostname for your company’s license](https://go.plotly.com)'''),
 job_queue = ('[job queue](/Docs/dash-snapshots/usage-job-queue)' if check_url else 'job queue')

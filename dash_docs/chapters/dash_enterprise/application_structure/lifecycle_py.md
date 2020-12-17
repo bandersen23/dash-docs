@@ -19,8 +19,7 @@ Kubernetes, these images are uploaded to the container registry.
 Single Server) or in the Kubernetes cluster ({kubernetes}).
 The number of containers created for each process type can be configured with 
 the `DOKKU_SCALE` file (optional) or in the App Manager.
-10. Run the `postdeploy` script in each container if the `app.json` file is 
-included (optional)
+10. Run the `postdeploy` script in each container if the `app.json` file is included with a `postdeploy` field (optional)
 11. Run the commands as specified in `Procfile` in the appropriate container(s) to start the app, job queue, or background process.
 12. Run the app health checks. If the health checks fail, abort the deployment and 
 keep the previous containers running. Override the default health checks with 
@@ -28,7 +27,7 @@ the `CHECKS` file (Dash Enterprise Single Server) or the `readiness` field in
 the `app.json` file ({kubernetes})
 13. Release: Open app to web traffic
 14. Remove the old containers & images
-15. Run periodic `liveness` checks on {kubernetes} to ensure that 
+15. Run periodic `liveness` checks on {kubernetes} if `app.json` includes `liveness` field, to ensure that 
 the app is still up and to restart it if not (not available on Dash Enterprise 
 Single Server).
 16. Restart the deployment process every 24 hours on {kubernetes} to 

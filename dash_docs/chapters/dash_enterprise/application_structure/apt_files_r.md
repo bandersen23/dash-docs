@@ -6,7 +6,7 @@ APT files can be used to install system-level packages via the `apt` package man
 Supported APT files include the following:
 
 ```
-apt-packages 
+apt-packages (unsupported)
 dpkg-packages
 apt-conf
 apt-env
@@ -17,36 +17,19 @@ apt-repositories
 apt-debconf
 ```
 
+> `apt-packages` is not supported by Dash R. An alternative  
+> solution is installing APT packages with a `predeploy` script instead. `app.json` section for more details.
+
 ---
 
-**apt-packages**
+**apt-packages (unsupported)**
 
 `apt-packages` is an optional text file required when apt packages need to be 
 installed in the Docker image. This might include database drivers or extra tools 
 that you might use in Workspaces like `vim` or `nano`.
 
-This file should contain APT packages to install. It accepts multiple packages per 
-line, and multiple lines.
-
-If this file is included, an `apt-get update` is triggered before installing the packages.
-In the following example we are installing `vim`, `unixodbc` and `unixodbc-dev`: 
-
-```shell
-vim
-unixodbc
-unixodbc-dev
-```
-
-<!-- ```
-Installing binary dependencies from apt-packages
-remote: W: GPG error: https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ InRelease: The following signatures were invalid: EXPKEYSIG 51716619E084DAB9 Michael Rutter <marutter@gmail.com>
-remote: E: The repository 'https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/ InRelease' is not signed.
-To dash-playground.plotly.host:aa-tngo-r
- ! [remote rejected] master -> master (pre-receive hook declined)
-error: failed to push some refs to 'dokku@dash-playground.plotly.host:aa-tngo-r'
-``` -->
-
----
+> `apt-packages` is not supported by Dash R. An alternative  
+> solution is installing APT packages with a `predeploy` script instead. `app.json` section for more details.
 
 **dpkg-packages**
 

@@ -91,8 +91,7 @@ TIMEOUT=10
 ATTEMPTS=3
 ```
 
-You can also create your own health check by writing a custom Flask endpoint that will return
-a value of your choosing. In the following example, we include  `@app.server.route('/status')` 
+You can also create your own health check by writing a custom Flask endpoint. In the following example, we include  `@app.server.route('/status')` 
 that returns `OK'. In practice, you can place whatever health checks you would like within this 
 function. This might include checking the uptime for 3rd party services like databases or APIs.
 
@@ -112,7 +111,10 @@ app.layout = ddk.App([
 # Custom status file for the deployment CHECKS
 @app.server.route('/status')
 def update_status():
+    # Include custom health logic in here
     return 'OK'
+
+    
 if __name__ == '__main__':
     app.run_server(debug=False)
 
