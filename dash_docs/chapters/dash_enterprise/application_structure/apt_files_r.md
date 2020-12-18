@@ -17,9 +17,6 @@ apt-repositories
 apt-debconf
 ```
 
-> `apt-packages` is not supported by Dash R. An alternative  
-> solution is installing APT packages with a `predeploy` script instead. `app.json` section for more details.
-
 ---
 
 **apt-packages (unsupported)**
@@ -28,8 +25,9 @@ apt-debconf
 installed in the Docker image. This might include database drivers or extra tools 
 that you might use in Workspaces like `vim` or `nano`.
 
-> `apt-packages` is not supported by Dash R. An alternative  
-> solution is installing APT packages with a `predeploy` script instead. `app.json` section for more details.
+> `apt-packages` is not supported by Dash R. **As a workaround,
+> you can install APT packages with a `predeploy` script instead.** See `app.json` 
+> section for more details.
 
 **dpkg-packages**
 

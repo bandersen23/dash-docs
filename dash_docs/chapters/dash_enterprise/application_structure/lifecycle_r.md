@@ -5,9 +5,6 @@ When you run `git push plotly master`, Dash Enterprise will do the following:
 1. Mount app source code.
 2. Detect which Buildpack to use based off of files present in app root folder. This R buildpack is detected by discovering a  `.buildpacks` file that contains the Dash for R buildpack.
 
-> **Workspaces do not support `R` buildpacks.** You cannot preview `R` apps in Workspaces.
-> This does not affect your ability to deploy these apps from workspaces.
-
 3. Install custom APT packages if an `apt-packages` is provided and custom `.deb` if a `dkpg-package` file is provided (optional)
 4. Install `R` app dependencies specified in `init.R`
 5. Run a build script if an `app.json` file is included with a `"predeploy"` field (optional). Changes made by this script will be committed to the Docker 
@@ -40,6 +37,11 @@ Single Server).
 
 > In **Dash Enterprise Workspaces**, steps 1-7 are used to create the Docker image that 
 > resembles the Dash app image.  The remaining steps to deploy the container are skipped.
+
+
+> **Workspaces do not support `R` buildpacks.** You cannot preview `R` apps in Workspaces.
+> This does not affect your ability to deploy these apps from workspaces.
+
 
 
 {kubernetes_notes}

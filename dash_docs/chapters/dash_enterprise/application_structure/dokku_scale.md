@@ -32,6 +32,6 @@ and **--preload** flags in your `Procfile` before modifying a `DOKKU_FILE`.
 
 Scaling with **--worker** and **--preload** consumes significantly less memory.
 
-> This recommendation does not apply to R (R does not use `gunicorn`).
+> This recommendation **does not apply to R** (R does not use `gunicorn`).
 
 ---

@@ -17,7 +17,7 @@ A minimal project structure might look like this:
 ```
 
 You may also include optional files such an `app.json` file if you want to call scripts when deploying changes, or a `CHECKS` file if you want to customize 
-pre-release health checks. See [Files Reference](#optional-files) section
+pre-release health checks. See **Optional Files** section
 below for more details.
 
 A more complex project structure might look like this:

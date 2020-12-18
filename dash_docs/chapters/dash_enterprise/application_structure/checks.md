@@ -4,7 +4,7 @@
 Enterprise's app health diagnostic checks. It must be place in your app's root
 directory.
 
-> `CHECKS` is only available on Dash Enterprise Single Server. Similar functionality 
+> **`CHECKS` is only available on Dash Enterprise Single Server.** Similar functionality 
 > for Dash Enterprise Kubernetes is available via the `app.json` file. 
 
 By default, Dash Enterprise will wait 10 seconds after starting each container 

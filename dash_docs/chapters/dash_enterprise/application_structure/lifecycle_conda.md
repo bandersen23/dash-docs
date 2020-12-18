@@ -41,6 +41,8 @@ Single Server).
 
 > In **Dash Enterprise Workspaces**, steps 1-7 are used to create the Docker image that 
 > resembles the Dash app image.  The remaining steps to deploy the container are skipped.
+
+
 > **Workspaces do not currently support `conda` buildpacks by default.** This means you cannot readily preview apps that use
 > `conda` in Workspaces. This does not affect your ability to deploy these apps from workspaces.  A workaround is adding `conda` to path by running the following command in the Workspace terminal before running your app:
 >

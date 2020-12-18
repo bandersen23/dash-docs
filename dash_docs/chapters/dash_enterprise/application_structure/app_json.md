@@ -51,8 +51,7 @@ See app.json section in {configure_system_dependencies} chapter for more details
                 "failureThreshold": 10
             }}
         }}
-    }}
-}}
+    }},
     "scripts": {{
         "dokku": {{
             "predeploy": "./predeploy.sh",
@@ -64,3 +63,5 @@ See app.json section in {configure_system_dependencies} chapter for more details
 ```
 
 See Zero Downtime Deploys section in {kubernetes} chapter for more details.
+
+{kubernetes_notes}

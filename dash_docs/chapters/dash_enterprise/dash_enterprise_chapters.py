@@ -3073,7 +3073,7 @@ Troubleshooting = html.Div(children=[
         ```
 
 
-        This error may happern if you are trying to push from a branch
+        This error may happen if you are trying to push from a branch
         that is not your `master` branch.
 
         To resolve get the name of your current
@@ -3114,7 +3114,7 @@ Troubleshooting = html.Div(children=[
 
         > Dash Enterprise uses buildpack technology in order to automatically
         > build Docker containers. These buildpacks are detected automatically
-        > dependeing on the files within the project file.
+        > depending on the files within the project file.
 
         > Dash Enterprise supports three different buildpacks: The standard Python & pip buildpack, a Python & conda buildpack, and a Dash for R buildpack. Dash Enterprise automatically selects the buildpack based off of which files are contained in the project:\
 
@@ -3139,7 +3139,6 @@ Troubleshooting = html.Div(children=[
         remote: See 'docker image build --help'
         ```
 
-        rm content that we're going to move elsewhere
         This error can happen if your project contains a `Dockerfile`.
         Dash Enterprise does not support projects that contain a `Dockerfile`.
         To resolve, remove the `Dockerfile` from your project and redeploy.
@@ -3148,7 +3147,7 @@ Troubleshooting = html.Div(children=[
 
         > Dash Enterprise uses buildpack technology in order to automatically
         > build Docker containers. These buildpacks are detected automatically
-        > dependeing on the files within the project file.
+        > depending on the files within the project file.
 
         > Dash Enterprise supports three different buildpacks: The standard Python & pip buildpack, a Python & conda buildpack, and a Dash for R buildpack. Dash Enterprise automatically selects the buildpack based off of which files are contained in the project:\
 
@@ -3415,7 +3414,7 @@ Troubleshooting = html.Div(children=[
         ```
 
 
-        This can happen when your `~/.ssh/config` is improproperly configured.
+        This can happen when your `~/.ssh/config` is improperly configured.
 
         See the **Modify SSH Config** section on <dccLink href="/dash-enterprise/ssh" children="SSH"/> page
         for more details. Watch out for trailing slashes in your Dash Enterprise Server domain!
@@ -3503,6 +3502,19 @@ Troubleshooting = html.Div(children=[
         ```
         git config --global protocol.version 0
         ```
+
+        **This error can also happen if you forgot to add the ~/.ssh/config entry.** 
+        It should resemble:
+
+        ```
+        Host <dash-enterprise-server>
+            Port 3022
+        ```
+        
+        See the Modify SSH Config section in [SSH Instructions chapter](https://dash.plotly.com/dash-enterprise/ssh)
+        for more details.
+
+
         '''
     ),
 
@@ -3618,7 +3630,7 @@ Troubleshooting = html.Div(children=[
         complete its task during the booting process. By default, `gunicorn` has a 30 second timeout.
 
         To resolve, you can either increase the amount of time your app's `web` process has to
-        complete its task or speed the task up by preloading data. These results can be acheived by
+        complete its task or speed the task up by preloading data. These results can be achieved by
         editing your `Procfile` and adding one of following `gunicorn` flags to that process:
 
         1. `--timeout` allows you to modify the default amount of time available for your workers to
