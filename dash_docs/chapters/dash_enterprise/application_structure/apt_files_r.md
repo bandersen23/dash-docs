@@ -17,6 +17,9 @@ apt-repositories
 apt-debconf
 ```
 
+> `apt-packages` is not supported by Dash R. An alternative  
+> solution is installing APT packages with a `predeploy` script instead. `app.json` section for more details.
+
 ---
 
 **apt-packages (unsupported)**

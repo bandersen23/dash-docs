@@ -59,6 +59,13 @@ See app.json section in {configure_system_dependencies} chapter for more details
         }}
     }}
 }}
+    "scripts": {{
+        "dokku": {{
+            "predeploy": "./predeploy.sh",
+            "postdeploy" "./postdeploy.sh"
+        }}
+    }}
+}}
 
 ```
 
