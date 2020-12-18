@@ -3399,30 +3399,6 @@ Troubleshooting = html.Div(children=[
 
     rc.Markdown(
         '''
-        ### Please make sure you have the correct access rights and the repository exists
-
-        ```shell
-        $ git push plotly master
-        [...]
-        dokku@<dash-enterprise-server>: Permission denied (publickey).
-
-        fatal: Could not read from remote repository.
-
-        Please make sure you have the correct access rights
-
-        and the repository exists.
-        ```
-
-
-        This can happen when your `~/.ssh/config` is improperly configured.
-
-        See the **Modify SSH Config** section on <dccLink href="/dash-enterprise/ssh" children="SSH"/> page
-        for more details. Watch out for trailing slashes in your Dash Enterprise Server domain!
-        '''
-    ),
-
-    rc.Markdown(
-        '''
         ### remote: Access denied
 
         ```shell
@@ -3462,6 +3438,30 @@ Troubleshooting = html.Div(children=[
         Git can sometimes cache these usernames after you've typed them. Run `$ git config credential.helper` to verify and correct the username.
 
         Also, some operating system's password managers can cache usernames as well. Open your operating system's password manager and verify the username & password if you are deploying with `https`, running into access denied errors, and `git` isn't asking you for your username and password.
+        '''
+    ),
+
+    rc.Markdown(
+        '''
+        ### Please make sure you have the correct access rights and the repository exists
+
+        ```shell
+        $ git push plotly master
+        [...]
+        dokku@<dash-enterprise-server>: Permission denied (publickey).
+
+        fatal: Could not read from remote repository.
+
+        Please make sure you have the correct access rights
+
+        and the repository exists.
+        ```
+
+
+        This can happen when your `~/.ssh/config` is improperly configured.
+
+        See the **Modify SSH Config** section on <dccLink href="/dash-enterprise/ssh" children="SSH"/> page
+        for more details. Watch out for trailing slashes in your Dash Enterprise Server domain!
         '''
     ),
 
